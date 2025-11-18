@@ -1,35 +1,34 @@
 import 'package:flutter/foundation.dart';
-
-import '../models/cart_item.dart';
 import '../models/product.dart';
-import '../utils/formatters.dart';
+
+class CartItem {
+  final Product product;
+  final String grind; // "Grão" ou "Moído"
+  int quantity;
+
+  CartItem({
+    required this.product,
+    required this.grind,
+    required this.quantity,
+  });
+}
 
 class CartController extends ChangeNotifier {
   final List<CartItem> _items = [];
-  String _cep = '';
+  String? _cep;
 
   List<CartItem> get items => List.unmodifiable(_items);
-  String get cep => _cep;
-
-  int get totalItems =>
-      _items.fold(0, (total, item) => total + item.quantity);
 
   double get subtotal =>
-      _items.fold(0.0, (total, item) => total + item.total);
-/*
-  void addProduct(Product product) {
-    final index =
-    _items.indexWhere((item) => item.product.sku == product.sku);
-    if (index >= 0) {
-      _items[index].quantity++;
-    } else {
-      _items.add(CartItem(product: product, quantity: 1));
-    }
-    notifyListeners();
-  }
-*/
+      _items.fold(0.0, (t, item) => t + item.product.price * item.quantity);
+
+  int get totalItems =>
+      _items.fold(0, (t, item) => t + item.quantity);
+
+  String? get cep => _cep;
+
+  // -------- ADICIONAR PRODUTO (AGORA COM GRIND) --------
   void addProduct(Product product, String grind) {
-    // se já existir o MESMO produto com a MESMA moagem, só soma quantidade
     final index = _items.indexWhere(
           (item) => item.product.sku == product.sku && item.grind == grind,
     );
@@ -45,33 +44,25 @@ class CartController extends ChangeNotifier {
         ),
       );
     }
-
     notifyListeners();
   }
 
-  void changeQty(String sku, int delta) {
-    final index =
-    _items.indexWhere((item) => item.product.sku == sku);
-    if (index < 0) return;
+  // -------- ALTERAR QUANTIDADE (CONSIDERANDO GRIND) --------
+  void changeQty(String sku, String grind, int delta) {
+    final index = _items.indexWhere(
+          (item) => item.product.sku == sku && item.grind == grind,
+    );
+    if (index == -1) return;
 
-    final item = _items[index];
-    item.quantity += delta;
-
-    if (item.quantity <= 0) {
+    _items[index].quantity += delta;
+    if (_items[index].quantity <= 0) {
       _items.removeAt(index);
     }
-
-    notifyListeners();
-  }
-
-  void removeItem(String sku) {
-    _items.removeWhere((item) => item.product.sku == sku);
     notifyListeners();
   }
 
   void clear() {
     _items.clear();
-    _cep = '';
     notifyListeners();
   }
 
@@ -80,34 +71,31 @@ class CartController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // -------- MENSAGEM PARA O WHATSAPP --------
   String buildWhatsMessage() {
-    if (_items.isEmpty) {
-      return 'Meu carrinho está vazio, mas tenho interesse nos cafés Frathéli.';
-    }
-
-    final linhas = <String>[];
-    linhas.add('🧺 *Pedido Frathéli Café*');
-    linhas.add('');
+    final buffer = StringBuffer();
+    buffer.writeln('Olá! Segue o resumo do meu pedido Frathéli Café:');
+    buffer.writeln('');
 
     for (final item in _items) {
-      linhas.add(
-          '• ${item.product.name} (SKU ${item.product.sku}) × ${item.quantity} — ${brl(item.total)}');
+      buffer.writeln(
+        '${item.quantity}x ${item.product.name} (${item.grind}) '
+            '- R\$ ${item.product.price.toStringAsFixed(2)}',
+      );
     }
 
-    linhas.add('');
-    linhas.add('Subtotal (produtos): *${brl(subtotal)}*');
-    linhas.add('Frete: *a calcular*');
-    linhas.add('Total (sem frete): *${brl(subtotal)}*');
+    buffer.writeln('');
+    buffer.writeln(
+      'Subtotal (sem frete): R\$ ${subtotal.toStringAsFixed(2)}',
+    );
 
-    if (_cep.isNotEmpty) {
-      linhas.add('');
-      linhas.add('CEP destino: $_cep');
+    if (_cep != null && _cep!.isNotEmpty) {
+      buffer.writeln('CEP para cálculo de frete: $_cep');
     }
 
-    linhas.add('');
-    linhas.add(
-        '_Poderia calcular o frete para o CEP $_cep e me enviar o orçamento._');
+    buffer.writeln('');
+    buffer.writeln('Obrigado! ☕🐝');
 
-    return linhas.join('\n');
+    return buffer.toString();
   }
 }

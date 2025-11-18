@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fratheli_cafe_web/views/widgets/accent_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/cart_button.dart';
+import 'package:fratheli_cafe_web/views/widgets/cart_drawer.dart';
 import 'package:fratheli_cafe_web/views/widgets/chip_bullet.dart';
 import 'package:fratheli_cafe_web/views/widgets/header_link.dart';
 import 'package:fratheli_cafe_web/views/widgets/secondary_button.dart';
@@ -151,7 +152,7 @@ class _HomePageState extends State<HomePage> {
             top: 0,
             bottom: 0,
             right: _cartOpen ? 0.0 : -min(width, 360.0),
-            child: _CartDrawer(
+            child: CartDrawer(
               cepController: _cepController,
               onClose: _closeCart,
               onCepSaved: (cep) {
@@ -964,7 +965,7 @@ class _ProcessCard extends StatelessWidget {
     );
   }
 }
-
+/*
 class _CartDrawer extends StatelessWidget {
   final TextEditingController cepController;
   final VoidCallback onClose;
@@ -1032,7 +1033,7 @@ class _CartDrawer extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          "${item.product.name}\nSKU: ${item.product.sku}",
+                          "${item.product.name} (${item.grind})\nSKU: ${item.product.sku}",
                           style: const TextStyle(fontSize: 14),
                         ),
                       ),
@@ -1041,13 +1042,13 @@ class _CartDrawer extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.remove),
                             onPressed: () =>
-                                cart.changeQty(item.product.sku, -1),
+                                cart.changeQty(item.product.sku, item.grind, -1),
                           ),
                           Text("${item.quantity}"),
                           IconButton(
                             icon: const Icon(Icons.add),
                             onPressed: () =>
-                                cart.changeQty(item.product.sku, 1),
+                                cart.changeQty(item.product.sku, item.grind, 1),
                           ),
                         ],
                       )
@@ -1137,7 +1138,7 @@ class _CartDrawer extends StatelessWidget {
     );
   }
 }
-
+*/
 void showProductImageDialog(BuildContext context, Product product) {
   showDialog(
     context: context,

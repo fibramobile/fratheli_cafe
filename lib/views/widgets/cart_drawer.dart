@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/cart_controller.dart';
 import '../../utils/formatters.dart';
 
-class _CartDrawer extends StatelessWidget {
+class CartDrawer extends StatelessWidget {
   final TextEditingController cepController;
   final VoidCallback onClose;
   final Function(String) onCepSaved;
   final VoidCallback onCheckout;
   final VoidCallback onClear;
 
-  const _CartDrawer({
+  const CartDrawer({
     required this.cepController,
     required this.onClose,
     required this.onCepSaved,
     required this.onCheckout,
     required this.onClear,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class _CartDrawer extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Header
+          // Cabeçalho
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -48,9 +50,16 @@ class _CartDrawer extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Items
+          // Itens
           Expanded(
-            child: ListView(
+            child: cart.items.isEmpty
+                ? const Center(
+              child: Text(
+                'Seu carrinho está vazio.',
+                style: TextStyle(color: Colors.white60),
+              ),
+            )
+                : ListView(
               children: cart.items.map((item) {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -63,7 +72,7 @@ class _CartDrawer extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          "${item.product.name}\nSKU: ${item.product.sku}",
+                          "${item.product.name} (${item.grind})\nSKU: ${item.product.sku}",
                           style: const TextStyle(fontSize: 14),
                         ),
                       ),
@@ -71,18 +80,14 @@ class _CartDrawer extends StatelessWidget {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.remove),
-                            onPressed: () => cart.changeQty(
-                              item.product.sku,
-                              -1,
-                            ),
+                            onPressed: () =>
+                                cart.changeQty(item.product.sku, item.grind, -1),
                           ),
                           Text("${item.quantity}"),
                           IconButton(
                             icon: const Icon(Icons.add),
-                            onPressed: () => cart.changeQty(
-                              item.product.sku,
-                              1,
-                            ),
+                            onPressed: () =>
+                                cart.changeQty(item.product.sku, item.grind, 1),
                           ),
                         ],
                       )
@@ -93,6 +98,8 @@ class _CartDrawer extends StatelessWidget {
             ),
           ),
 
+          const SizedBox(height: 8),
+
           // CEP
           TextField(
             controller: cepController,
@@ -101,16 +108,13 @@ class _CartDrawer extends StatelessWidget {
               hintText: "00000-000",
               border: OutlineInputBorder(),
             ),
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,          // só números
+              LengthLimitingTextInputFormatter(8),             // máximo 8 dígitos
+            ],
           ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () {
-              if (cepController.text.length >= 8) {
-                onCepSaved(cepController.text);
-              }
-            },
-            child: const Text("Registrar CEP"),
-          ),
+
           const SizedBox(height: 16),
 
           // Totais
@@ -124,9 +128,9 @@ class _CartDrawer extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text("Frete"),
                   Text("a calcular"),
                 ],
@@ -147,7 +151,38 @@ class _CartDrawer extends StatelessWidget {
           const SizedBox(height: 16),
 
           ElevatedButton(
-            onPressed: onCheckout,
+            onPressed: () {
+              final cep = cepController.text.trim();
+
+              if (cep.length < 8) {
+                // MOSTRA ALERTA
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text("CEP obrigatório"),
+                      content: const Text(
+                        "Para finalizar seu pedido, informe o CEP para que possamos calcular o frete.",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text("OK"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+                return; // ❌ Impede de continuar
+              }
+
+              // CEP OK → Salva e finaliza
+              onCepSaved(cep);
+
+              Future.delayed(const Duration(milliseconds: 500), () {
+                onCheckout();
+              });
+            },
             child: const Text("Finalizar pelo WhatsApp"),
           ),
           TextButton(
