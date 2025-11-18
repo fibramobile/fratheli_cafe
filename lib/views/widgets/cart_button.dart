@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class _CartButton extends StatelessWidget {
+class CartButton extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
 
-  const _CartButton({required this.count, required this.onTap});
+  const CartButton({required this.count, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

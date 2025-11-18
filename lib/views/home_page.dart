@@ -1,7 +1,11 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:fratheli_cafe_web/views/widgets/accent_button.dart';
+import 'package:fratheli_cafe_web/views/widgets/cart_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/chip_bullet.dart';
+import 'package:fratheli_cafe_web/views/widgets/header_link.dart';
+import 'package:fratheli_cafe_web/views/widgets/secondary_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/section_header.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -228,29 +232,29 @@ class _HomePageState extends State<HomePage> {
               if (!isMobile)
                 Row(
                   children: [
-                    _HeaderLink(
+                    HeaderLink(
                       label: 'Cafés especiais',
                       onTap: () => _scrollTo(_cafesKey),
                     ),
-                    _HeaderLink(
+                    HeaderLink(
                       label: 'Processo',
                       onTap: () => _scrollTo(_processoKey),
                     ),
-                    _HeaderLink(
+                    HeaderLink(
                       label: 'Origem',
                       onTap: () => _scrollTo(_origemKey),
                     ),
-                    _HeaderLink(
+                    HeaderLink(
                       label: 'Contato',
                       onTap: () => _scrollTo(_contatoKey),
                     ),
                     const SizedBox(width: 10),
-                    _AccentButton(
+                    AccentButton(
                       label: 'Instagram',
                       onTap: () => _openUrl(instagramUrl),
                     ),
                     const SizedBox(width: 12),
-                    _CartButton(
+                    CartButton(
                       count: cart.totalItems,
                       onTap: _openCart,
                     ),
@@ -259,7 +263,7 @@ class _HomePageState extends State<HomePage> {
               else
                 Row(
                   children: [
-                    _CartButton(
+                    CartButton(
                       count: cart.totalItems,
                       onTap: _openCart,
                     ),
@@ -318,7 +322,7 @@ class _HomePageState extends State<HomePage> {
                       spacing: 10,
                       runSpacing: 10,
                       children: [
-                        _AccentButton(
+                        AccentButton(
                           label: 'Comprar pelo WhatsApp',
                           onTap: () {
                             const msg =
@@ -326,7 +330,7 @@ class _HomePageState extends State<HomePage> {
                             _openWhats(msg);
                           },
                         ),
-                        _SecondaryButton(
+                        SecondaryButton(
                           label: 'Conhecer os cafés',
                           onTap: () => _scrollTo(_cafesKey),
                         ),
@@ -591,7 +595,7 @@ class _HomePageState extends State<HomePage> {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _AccentButton(
+              AccentButton(
                 label: 'WhatsApp',
                 onTap: () {
                   const msg =
@@ -599,7 +603,7 @@ class _HomePageState extends State<HomePage> {
                   _openWhats(msg);
                 },
               ),
-              _SecondaryButton(
+              SecondaryButton(
                 label: '@fratheli_cafe',
                 onTap: () => _openUrl(instagramUrl),
               ),
@@ -698,365 +702,7 @@ class _HomePageState extends State<HomePage> {
   ];
 }
 
-// ===================================================================
-//  WIDGETS PRIVADOS (tudo no mesmo arquivo para não dar erro de import)
-// ===================================================================
-/*
-class _SectionWrapper extends StatelessWidget {
-  final Widget child;
-  final bool alt;
 
-  const _SectionWrapper({
-    super.key,
-    required this.child,
-    this.alt = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
-      decoration: BoxDecoration(
-        color: alt ? const Color(0xFF131316) : Colors.transparent,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1120),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-*/
-/*
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _SectionHeader({
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: Color(0xFF8F94A3),
-            fontSize: 16,
-          ),
-        ),
-      ],
-    );
-  }
-}
-*/
-/*
-class _ChipBullet extends StatelessWidget {
-  final String label;
-
-  const _ChipBullet(this.label);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF191A1F),
-        border: Border.all(color: const Color(0xFF2A2B32)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFFD4D4D4),
-          fontSize: 13,
-        ),
-      ),
-    );
-  }
-}
-*/
-
-class _AccentButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _AccentButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 22),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: const Color(0xFFD4AF37),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black54,
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SecondaryButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _SecondaryButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 22),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderLink extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _HeaderLink({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CartButton extends StatelessWidget {
-  final int count;
-  final VoidCallback onTap;
-
-  const _CartButton({required this.count, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        GestureDetector(
-          onTap: onTap,
-          child: const Icon(Icons.shopping_cart_outlined, size: 32),
-        ),
-        if (count > 0)
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.redAccent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '$count',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          )
-      ],
-    );
-  }
-}
-
-/*
-class _ProductCard extends StatelessWidget {
-  final Product product;
-  final VoidCallback onAdd;
-
-  const _ProductCard({
-    required this.product,
-    required this.onAdd,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF131316),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white10),
-      ),
-      padding: const EdgeInsets.all(15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // FOTO – ocupa a maior parte e é flexível
-          Expanded(
-            flex: 6,
-            child: GestureDetector(
-              onTap: () => showProductImageDialog(context, product),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: AspectRatio(
-                  aspectRatio: 3 / 4,
-                  child: Image.asset(
-                    product.imagePath,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // TAG (se tiver)
-          if (product.tag != null && product.tag!.isNotEmpty)
-            Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: product.tagAlt
-                    ? const Color(0xFFD4AF37)
-                    : Colors.white.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                product.tag,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: product.tagAlt ? Colors.black : Colors.white,
-                ),
-              ),
-            ),
-
-          const SizedBox(height: 6),
-
-          // NOME
-          Text(
-            product.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-          ),
-
-          const SizedBox(height: 4),
-
-          // META / descrição curta
-          if (product.meta != null && product.meta.isNotEmpty)
-            Text(
-              product.meta,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF9FA3B3),
-              ),
-            ),
-
-          const SizedBox(height: 6),
-
-          // PREÇO
-          Text(
-            brl(product.price),
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFD4AF37),
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // BOTÃO – ocupa o espaço restante de forma controlada
-          SizedBox(
-            width: double.infinity,
-            height: 40,
-            child: ElevatedButton(
-              onPressed: onAdd,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD4AF37),
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              child: const Text(
-                'Adicionar ao carrinho',
-                style: TextStyle(fontSize: 14),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-*/
 class _ProductCard extends StatefulWidget {
   final Product product;
   final void Function(String grind) onAdd; // recebe "Grão" ou "Moído"
@@ -1217,23 +863,32 @@ class _ProductCardState extends State<_ProductCard> {
           // SELETOR GRÃO / MOÍDO
           Row(
             children: [
-              ChoiceChip(
-                label: const Text('Grão'),
-                selected: _selectedGrind == 'Grão',
-                onSelected: (_) {
-                  setState(() => _selectedGrind = 'Grão');
-                },
+              Expanded(
+                child: ChoiceChip(
+                  label: const Center(child: Text('Grão')),
+                  selected: _selectedGrind == 'Grão',
+                  labelStyle: const TextStyle(fontSize: 13),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                  onSelected: (_) {
+                    setState(() => _selectedGrind = 'Grão');
+                  },
+                ),
               ),
               const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('Moído'),
-                selected: _selectedGrind == 'Moído',
-                onSelected: (_) {
-                  setState(() => _selectedGrind = 'Moído');
-                },
+              Expanded(
+                child: ChoiceChip(
+                  label: const Center(child: Text('Moído')),
+                  selected: _selectedGrind == 'Moído',
+                  labelStyle: const TextStyle(fontSize: 13),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                  onSelected: (_) {
+                    setState(() => _selectedGrind = 'Moído');
+                  },
+                ),
               ),
             ],
           ),
+
 
           const SizedBox(height: 10),
 
@@ -1265,8 +920,6 @@ class _ProductCardState extends State<_ProductCard> {
     );
   }
 }
-
-
 
 class _ProcessCard extends StatelessWidget {
   final int index;
@@ -1484,8 +1137,6 @@ class _CartDrawer extends StatelessWidget {
     );
   }
 }
-
-
 
 void showProductImageDialog(BuildContext context, Product product) {
   showDialog(

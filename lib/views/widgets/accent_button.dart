@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class _AccentButton extends StatelessWidget {
+class AccentButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _AccentButton({required this.label, required this.onTap});
+  const AccentButton({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

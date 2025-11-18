@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class _HeaderLink extends StatelessWidget {
+class HeaderLink extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _HeaderLink({required this.label, required this.onTap});
+  const HeaderLink({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
