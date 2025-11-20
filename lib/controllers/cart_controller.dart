@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/product.dart';
+import '../utils/formatters.dart';
 
 class CartItem {
   final Product product;
@@ -16,16 +17,33 @@ class CartItem {
 class CartController extends ChangeNotifier {
   final List<CartItem> _items = [];
   String? _cep;
-
   List<CartItem> get items => List.unmodifiable(_items);
-
-  double get subtotal =>
-      _items.fold(0.0, (t, item) => t + item.product.price * item.quantity);
-
-  int get totalItems =>
-      _items.fold(0, (t, item) => t + item.quantity);
-
+  double get subtotal => _items.fold(0.0, (t, item) => t + item.product.price * item.quantity);
+  int get totalItems => _items.fold(0, (t, item) => t + item.quantity);
   String? get cep => _cep;
+  double? freightValue;
+  String? freightService;
+  String? freightDeadline;
+
+  void setFreight({
+    required double value,
+    required String service,
+    required String prazo,
+  }) {
+    freightValue = value;
+    freightService = service;
+    freightDeadline = prazo;
+    notifyListeners();
+  }
+
+  void clearFreight() {
+    freightValue = null;
+    freightService = null;
+    freightDeadline = null;
+    notifyListeners();
+  }
+
+  double get totalWithFreight => subtotal + (freightValue ?? 0);
 
   // -------- ADICIONAR PRODUTO (AGORA COM GRIND) --------
   void addProduct(Product product, String grind) {
@@ -63,8 +81,11 @@ class CartController extends ChangeNotifier {
 
   void clear() {
     _items.clear();
+    clearFreight();
+    // se tiver cep salvo e quiser manter, não mexe nele
     notifyListeners();
   }
+
 
   void setCep(String cep) {
     _cep = cep;
@@ -72,6 +93,7 @@ class CartController extends ChangeNotifier {
   }
 
   // -------- MENSAGEM PARA O WHATSAPP --------
+  /*
   String buildWhatsMessage() {
     final buffer = StringBuffer();
     buffer.writeln('Olá! Segue o resumo do meu pedido Frathéli Café:');
@@ -98,4 +120,38 @@ class CartController extends ChangeNotifier {
 
     return buffer.toString();
   }
+  */
+
+  String buildWhatsMessage() {
+    final buffer = StringBuffer();
+
+    buffer.writeln('Novo pedido Frathéli Café:');
+    buffer.writeln('');
+
+    for (final item in items) {
+      buffer.writeln(
+        '- ${item.quantity}x ${item.product.name} (${item.grind ?? 'Grão/Moído'}) '
+            '— ${brl(item.product.price * item.quantity)}',
+      );
+    }
+
+    buffer.writeln('');
+    buffer.writeln('Subtotal: ${brl(subtotal)}');
+
+    if (freightValue != null) {
+      buffer.writeln(
+        'Frete: ${brl(freightValue!)} — $freightService ($freightDeadline)',
+      );
+      buffer.writeln('Total com frete: ${brl(totalWithFreight)}');
+    } else {
+      buffer.writeln('Frete: a calcular');
+    }
+
+    if (cep != null && cep!.isNotEmpty) {
+      buffer.writeln('CEP de entrega: $cep');
+    }
+
+    return buffer.toString();
+  }
+
 }

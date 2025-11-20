@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -10,7 +11,7 @@ import 'package:fratheli_cafe_web/views/widgets/secondary_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/section_header.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-
+import 'package:http/http.dart' as http;
 import '../controllers/cart_controller.dart';
 import '../models/product.dart';
 import '../utils/formatters.dart';
@@ -75,6 +76,139 @@ class _HomePageState extends State<HomePage> {
   void _closeCart() {
     setState(() => _cartOpen = false);
   }
+
+  Future<void> _calcularFrete(BuildContext context, String cep) async {
+    final cart = context.read<CartController>();
+
+    try {
+      final uri = Uri.parse(
+        'https://frathelicafe.com.br/cotacao_frete.php?cep=$cep',
+      );
+
+      final resp = await http.get(uri);
+
+      if (resp.statusCode != 200) {
+        throw Exception('HTTP ${resp.statusCode}');
+      }
+
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+
+      if (data['ok'] != true) {
+        throw Exception(data['erro'] ?? 'Falha ao calcular frete');
+      }
+
+      final opcoes = (data['opcoes'] as List<dynamic>).cast<Map<String, dynamic>>();
+      if (opcoes.isEmpty) {
+        throw Exception('Nenhuma opção de frete retornada.');
+      }
+
+      // Dialog para escolher uma opção
+      final selecionada = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) {
+          return Dialog(
+            backgroundColor: const Color(0xFF141418),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Opções de frete',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: opcoes.length,
+                        separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+                        itemBuilder: (context, index) {
+                          final op = opcoes[index];
+                          final nome = op['transportadora'] as String? ?? 'Frete';
+                          final valor = (op['valor'] as num).toDouble();
+                          final prazo = op['prazo'] as String? ?? '';
+
+                          return ListTile(
+                            onTap: () => Navigator.of(context).pop(op),
+                            title: Text(
+                              nome,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Text(
+                              prazo,
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                            trailing: Text(
+                              brl(valor),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Fechar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+
+      if (selecionada != null) {
+        final valor = (selecionada['valor'] as num).toDouble();
+        final nome = selecionada['transportadora'] as String? ?? 'Frete';
+        final prazo = selecionada['prazo'] as String? ?? '';
+
+        cart.setFreight(
+          value: valor,
+          service: nome,
+          prazo: prazo,
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Frete selecionado: ${brl(valor)} — $nome'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Erro'),
+          content: Text('Não foi possível calcular o frete.\n\n$e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Fechar'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -157,6 +291,7 @@ class _HomePageState extends State<HomePage> {
               onClose: _closeCart,
               onCepSaved: (cep) {
                 context.read<CartController>().setCep(cep);
+               /*
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
@@ -164,6 +299,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 );
+                */
               },
               onCheckout: () {
                 if (cart.items.isEmpty) {
@@ -178,6 +314,7 @@ class _HomePageState extends State<HomePage> {
                 _openUrl(_buildWhatsUrl(msg));
               },
               onClear: () => context.read<CartController>().clear(),
+              onCalculateFreight: (cep) => _calcularFrete(context, cep), // 👈
             ),
           ),
         ],

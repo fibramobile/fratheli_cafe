@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/cart_controller.dart';
 import '../../utils/formatters.dart';
+import 'package:http/http.dart' as http;
 
 class CartDrawer extends StatelessWidget {
   final TextEditingController cepController;
@@ -11,6 +14,7 @@ class CartDrawer extends StatelessWidget {
   final Function(String) onCepSaved;
   final VoidCallback onCheckout;
   final VoidCallback onClear;
+  final Future<void> Function(String cep) onCalculateFreight;
 
   const CartDrawer({
     required this.cepController,
@@ -18,8 +22,55 @@ class CartDrawer extends StatelessWidget {
     required this.onCepSaved,
     required this.onCheckout,
     required this.onClear,
+    required this.onCalculateFreight, // 👈
   });
 
+/*
+  Future<Map<String, dynamic>> calcularFrete(String cepDestino) async {
+    final url = Uri.parse('https://frathelicafe.com.br/cotacao_frete.php');
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'cep_destino': cepDestino}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Erro ao calcular frete: ${response.body}');
+    }
+
+    return jsonDecode(response.body);
+  }
+
+  void _mostrarOpcoesFrete(BuildContext context, Map<String, dynamic> dados) {
+    final opcoes = dados['opcoes'] as List<dynamic>;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Opções de frete"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: opcoes.map((op) {
+              return ListTile(
+                title: Text(op['transportadora']),
+                subtitle: Text("Prazo: ${op['prazo']}"),
+                trailing: Text("R\$ ${op['valor']}"),
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Fechar"),
+            )
+          ],
+        );
+      },
+    );
+  }
+*/
 
   @override
   Widget build(BuildContext context) {
@@ -110,14 +161,44 @@ class CartDrawer extends StatelessWidget {
             ),
             keyboardType: TextInputType.number,
             inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,          // só números
-              LengthLimitingTextInputFormatter(8),             // máximo 8 dígitos
+              LengthLimitingTextInputFormatter(8),
+              FilteringTextInputFormatter.digitsOnly,
             ],
+          ),
+          const SizedBox(height: 8),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () async {
+                final cep = cepController.text.trim();
+                if (cep.length < 8) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('CEP inválido'),
+                      content: const Text('Digite um CEP com 8 dígitos para calcular o frete.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Fechar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return;
+                }
+
+                onCepSaved(cep);
+                await onCalculateFreight(cep);
+              },
+              child: const Text("Calcular Frete"),
+            ),
           ),
 
           const SizedBox(height: 16),
 
-          // Totais
+// Totais
           Column(
             children: [
               Row(
@@ -128,22 +209,37 @@ class CartDrawer extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Frete"),
-                  Text("a calcular"),
+                  const Text("Frete"),
+                  Text(
+                    cart.freightValue != null
+                        ? "${brl(cart.freightValue!)}"
+                        : "a calcular",
+                  ),
                 ],
               ),
+              if (cart.freightService != null) ...[
+                const SizedBox(height: 2),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    "${cart.freightService} (${cart.freightDeadline})",
+                    style: const TextStyle(fontSize: 11, color: Colors.white60),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
               const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    "Total (sem frete)",
+                    "Total",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  Text(brl(cart.subtotal)),
+                  Text(brl(cart.totalWithFreight)),
                 ],
               ),
             ],
@@ -152,36 +248,23 @@ class CartDrawer extends StatelessWidget {
 
           ElevatedButton(
             onPressed: () {
-              final cep = cepController.text.trim();
-
-              if (cep.length < 8) {
-                // MOSTRA ALERTA
+              if (cepController.text.trim().length < 8) {
                 showDialog(
                   context: context,
-                  builder: (context) {
-                    return AlertDialog(
-                      title: const Text("CEP obrigatório"),
-                      content: const Text(
-                        "Para finalizar seu pedido, informe o CEP para que possamos calcular o frete.",
+                  builder: (_) => AlertDialog(
+                    title: const Text('CEP obrigatório'),
+                    content: const Text('Digite o CEP e calcule o frete antes de finalizar o pedido.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Fechar'),
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text("OK"),
-                        ),
-                      ],
-                    );
-                  },
+                    ],
+                  ),
                 );
-                return; // ❌ Impede de continuar
+                return;
               }
-
-              // CEP OK → Salva e finaliza
-              onCepSaved(cep);
-
-              Future.delayed(const Duration(milliseconds: 500), () {
-                onCheckout();
-              });
+              onCheckout();
             },
             child: const Text("Finalizar pelo WhatsApp"),
           ),
