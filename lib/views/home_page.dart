@@ -76,7 +76,7 @@ class _HomePageState extends State<HomePage> {
   void _closeCart() {
     setState(() => _cartOpen = false);
   }
-
+/*
   Future<void> _calcularFrete(BuildContext context, String cep) async {
     final cart = context.read<CartController>();
 
@@ -208,6 +208,153 @@ class _HomePageState extends State<HomePage> {
       );
     }
   }
+*/
+  Future<void> _calcularFrete(BuildContext context, String cep) async {
+    final cart = context.read<CartController>();
+
+    try {
+      // ---- NOVO: calcular quantidade total de pacotes ----
+      final totalPacotes = cart.items.fold<int>(
+        0,
+            (soma, item) => soma + item.quantity,
+      );
+
+      print('📦 Total de pacotes enviados para o servidor: $totalPacotes');
+
+      // ---- NOVO: enviar também a quantidade ----
+      final uri = Uri.parse(
+        'https://frathelicafe.com.br/cotacao_frete.php',
+      ).replace(
+        queryParameters: {
+          'cep': cep,
+          'qtd': totalPacotes.toString(),
+        },
+      );
+
+      final resp = await http.get(uri);
+
+      if (resp.statusCode != 200) {
+        throw Exception('HTTP ${resp.statusCode}');
+      }
+
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+
+      if (data['ok'] != true) {
+        throw Exception(data['erro'] ?? 'Falha ao calcular frete');
+      }
+
+      final opcoes = (data['opcoes'] as List<dynamic>).cast<Map<String, dynamic>>();
+      if (opcoes.isEmpty) {
+        throw Exception('Nenhuma opção de frete retornada.');
+      }
+
+      // Dialog para escolher uma opção
+      final selecionada = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) {
+          return Dialog(
+            backgroundColor: const Color(0xFF141418),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Opções de frete',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: opcoes.length,
+                        separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+                        itemBuilder: (context, index) {
+                          final op = opcoes[index];
+                          final nome = op['transportadora'] as String? ?? 'Frete';
+                          final valor = (op['valor'] as num).toDouble();
+                          final prazo = op['prazo'] as String? ?? '';
+
+                          return ListTile(
+                            onTap: () => Navigator.of(context).pop(op),
+                            title: Text(
+                              nome,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Text(
+                              prazo,
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                            trailing: Text(
+                              brl(valor),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Fechar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+
+      if (selecionada != null) {
+        final valor = (selecionada['valor'] as num).toDouble();
+        final nome = selecionada['transportadora'] as String? ?? 'Frete';
+        final prazo = selecionada['prazo'] as String? ?? '';
+
+        cart.setFreight(
+          value: valor,
+          service: nome,
+          prazo: prazo,
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Frete selecionado: ${brl(valor)} — $nome'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Erro'),
+          content: Text('Não foi possível calcular o frete.\n\n$e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Fechar'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
 
 
   @override
@@ -779,7 +926,7 @@ class _HomePageState extends State<HomePage> {
       "Perfil floral intenso, extremamente aromático, notas de ervas frescas e camomila. Mel produzido pela abelha Uruçu Amarela (Bugia).",
       imagePath: "assets/img/cafe_bugia.jpg",
       price: 35.90,          // preço atual (com desconto)
-      originalPrice: 44.90,  // 👈 preço antigo (vai aparecer cortado)
+      originalPrice: 52.90,  // 👈 preço antigo (vai aparecer cortado)
       tag: "ORIGEN",
       tagAlt: false,
       meta: "Edição especial com mel de abelha nativa",
@@ -815,9 +962,9 @@ class _HomePageState extends State<HomePage> {
       sku: "FLOR-250",
       name: "Flor da Mata - 250g",
       description:
-      "Café artesanal com notas doces, corpo médio e finalização limpa. Perfil equilibrado e muito agradável.",
+      "Café artesanal gourmet com notas doces, corpo médio e finalização limpa. Perfil equilibrado e muito agradável.",
       imagePath: "assets/img/cafe_flor_da_mata.jpg",
-      price: 27.90,
+      price: 30.90,
       originalPrice: 35.90,
       tag: "MICROLOTE",
       tagAlt: false,
@@ -828,18 +975,17 @@ class _HomePageState extends State<HomePage> {
       sku: "ROCA-250",
       name: "Cheiro de Roça - 250g",
       description:
-      "Café tradicional de montanha, sabor encorpado, notas de chocolate e rapadura. Ideal para o dia a dia.",
+      "Café tradicional das montanhas capixabas, sabor encorpado, notas de chocolate e amendoas. Ideal para o dia a dia.",
       imagePath: "assets/img/cafe_cheiro_de_roca.jpg",
-      price: 22.90,
-      originalPrice: 30.00,
+      price: 27.90,
+      originalPrice: 32.00,
       tag: "Intenso",
       tagAlt: true,
       meta: "Sabor clássico do interior",
-      inStock: false,
+      inStock: true,
     ),
   ];
 }
-
 
 class _ProductCard extends StatefulWidget {
   final Product product;
@@ -1001,6 +1147,7 @@ class _ProductCardState extends State<_ProductCard> {
           // SELETOR GRÃO / MOÍDO
           Row(
             children: [
+              if (product.sku != "ROCA-250" && product.sku != "FLOR-250")
               Expanded(
                 child: ChoiceChip(
                   label: const Center(child: Text('Grão')),
