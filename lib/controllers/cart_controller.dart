@@ -24,6 +24,24 @@ class CartController extends ChangeNotifier {
   double? freightValue;
   String? freightService;
   String? freightDeadline;
+  String? customerName;
+  String? customerPhone;
+  String? customerCpf;
+  String? customerAddress;
+
+  void setCustomerData({
+    required String name,
+    required String phone,
+    required String cpf,
+    required String address,
+  }) {
+    customerName = name;
+    customerPhone = phone;
+    customerCpf = cpf;
+    customerAddress = address;
+    notifyListeners();
+  }
+
 
   void setFreight({
     required double value,
@@ -93,34 +111,7 @@ class CartController extends ChangeNotifier {
   }
 
   // -------- MENSAGEM PARA O WHATSAPP --------
-  /*
-  String buildWhatsMessage() {
-    final buffer = StringBuffer();
-    buffer.writeln('Olá! Segue o resumo do meu pedido Frathéli Café:');
-    buffer.writeln('');
 
-    for (final item in _items) {
-      buffer.writeln(
-        '${item.quantity}x ${item.product.name} (${item.grind}) '
-            '- R\$ ${item.product.price.toStringAsFixed(2)}',
-      );
-    }
-
-    buffer.writeln('');
-    buffer.writeln(
-      'Subtotal (sem frete): R\$ ${subtotal.toStringAsFixed(2)}',
-    );
-
-    if (_cep != null && _cep!.isNotEmpty) {
-      buffer.writeln('CEP para cálculo de frete: $_cep');
-    }
-
-    buffer.writeln('');
-    buffer.writeln('Obrigado! ☕🐝');
-
-    return buffer.toString();
-  }
-  */
 
   String buildWhatsMessage() {
     final buffer = StringBuffer();
@@ -151,7 +142,27 @@ class CartController extends ChangeNotifier {
       buffer.writeln('CEP de entrega: $cep');
     }
 
+    // 🔻 DADOS DO CLIENTE
+    if (customerName != null &&
+        customerPhone != null &&
+        customerCpf != null &&
+        customerAddress != null &&
+        customerName!.isNotEmpty &&
+        customerPhone!.isNotEmpty &&
+        customerCpf!.isNotEmpty &&
+        customerAddress!.isNotEmpty) {
+      buffer.writeln('');
+      buffer.writeln('📦 Dados para envio:');
+      buffer.writeln('Nome: $customerName');
+      buffer.writeln('CPF: $customerCpf');
+      buffer.writeln('Telefone: $customerPhone');
+      buffer.writeln('Endereço:');
+      buffer.writeln(customerAddress);
+    }
+
     return buffer.toString();
   }
+
+
 
 }

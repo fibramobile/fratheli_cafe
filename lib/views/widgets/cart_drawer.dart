@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/cart_controller.dart';
@@ -75,6 +76,21 @@ class CartDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
+
+    final cpfMask = MaskTextInputFormatter(
+      mask: '###.###.###-##',
+      filter: {"#": RegExp(r'[0-9]')},
+    );
+
+    final phoneMask = MaskTextInputFormatter(
+      mask: '(##) #####-####',
+      filter: {"#": RegExp(r'[0-9]')},
+    );
+
+    final cepMask = MaskTextInputFormatter(
+      mask: '#####-###',
+      filter: {"#": RegExp(r'[0-9]')},
+    );
 
     return Container(
       width: 360,
@@ -150,21 +166,18 @@ class CartDrawer extends StatelessWidget {
           ),
 
           const SizedBox(height: 8),
-
-          // CEP
+//CEP
           TextField(
             controller: cepController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [cepMask],
             decoration: const InputDecoration(
               labelText: "CEP",
               hintText: "00000-000",
               border: OutlineInputBorder(),
             ),
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              LengthLimitingTextInputFormatter(8),
-              FilteringTextInputFormatter.digitsOnly,
-            ],
           ),
+
           const SizedBox(height: 8),
 
           SizedBox(
@@ -247,6 +260,173 @@ class CartDrawer extends StatelessWidget {
           const SizedBox(height: 16),
 
           ElevatedButton(
+            onPressed: () async {
+              final cart = context.read<CartController>();
+
+              // 1) Verifica se carrinho está vazio
+              if (cart.items.isEmpty) {
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text('Carrinho vazio'),
+                    content: const Text('Adicione pelo menos um produto antes de finalizar o pedido.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Fechar'),
+                      ),
+                    ],
+                  ),
+                );
+                return;
+              }
+
+              // 2) Verifica CEP
+              final cep = cepController.text.trim();
+              if (cep.length < 8) {
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text('CEP obrigatório'),
+                    content: const Text('Informe um CEP válido para calcular o frete.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Fechar'),
+                      ),
+                    ],
+                  ),
+                );
+                return;
+              }
+
+              // Salva o CEP no controller (você já fazia isso)
+              onCepSaved(cep);
+
+              // 3) Abre diálogo de dados do cliente
+              final result = await showDialog<Map<String, String>>(
+                context: context,
+                builder: (ctx) {
+                  final formKey = GlobalKey<FormState>();
+                  final nameController = TextEditingController();
+                  final phoneController = TextEditingController();
+                  final cpfController = TextEditingController();
+                  final addressController = TextEditingController();
+
+                  return AlertDialog(
+                    backgroundColor: const Color(0xFF141418),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    title: const Text('Dados para envio'),
+                    content: Form(
+                      key: formKey,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextFormField(
+                              controller: nameController,
+                              decoration: const InputDecoration(
+                                labelText: 'Nome completo',
+                              ),
+                              validator: (v) {
+                                if (v == null || v.trim().length < 3) {
+                                  return 'Informe o nome completo';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: phoneController,
+                              decoration: const InputDecoration(labelText: 'Telefone (WhatsApp)'),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [phoneMask],
+                              validator: (v) {
+                                if (v == null || v.isEmpty || phoneMask.getUnmaskedText().length < 10) {
+                                  return 'Informe um telefone válido';
+                                }
+                                return null;
+                              },
+                            ),
+
+
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: cpfController,
+                              decoration: const InputDecoration(labelText: 'CPF'),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [cpfMask],
+                              validator: (v) {
+                                if (v == null || v.isEmpty || cpfMask.getUnmaskedText().length != 11) {
+                                  return 'Informe um CPF válido';
+                                }
+                                return null;
+                              },
+                            ),
+
+
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: addressController,
+                              decoration: const InputDecoration(
+                                labelText: 'Endereço completo de entrega',
+                                hintText: 'Rua, número, bairro, cidade, UF, complemento',
+                              ),
+                              maxLines: 3,
+                              validator: (v) {
+                                if (v == null || v.trim().length < 10) {
+                                  return 'Descreva o endereço completo';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Cancelar'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (formKey.currentState?.validate() ?? false) {
+                            Navigator.of(ctx).pop({
+                              'nome': nameController.text.trim(),
+                              'telefone': phoneController.text.trim(),
+                              'cpf': cpfController.text.trim(),
+                              'endereco': addressController.text.trim(),
+                            });
+                          }
+                        },
+                        child: const Text('Continuar'),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              // Se o usuário cancelou o diálogo
+              if (result == null) return;
+
+              // 4) Salva no CartController
+              cart.setCustomerData(
+                name: result['nome'] ?? '',
+                phone: result['telefone'] ?? '',
+                cpf: result['cpf'] ?? '',
+                address: result['endereco'] ?? '',
+              );
+
+              // 5) Chama o callback de checkout (que já monta e abre o WhatsApp)
+              onCheckout();
+            },
+            child: const Text("Finalizar pelo WhatsApp"),
+          ),
+/*
+          ElevatedButton(
             onPressed: () {
               if (cepController.text.trim().length < 8) {
                 showDialog(
@@ -268,6 +448,7 @@ class CartDrawer extends StatelessWidget {
             },
             child: const Text("Finalizar pelo WhatsApp"),
           ),
+          */
           TextButton(
             onPressed: onClear,
             child: const Text("Limpar carrinho"),
