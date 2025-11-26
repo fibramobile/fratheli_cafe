@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:fratheli_cafe_web/views/widgets/accent_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/cart_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/cart_drawer.dart';
@@ -16,8 +17,7 @@ import '../controllers/cart_controller.dart';
 import '../models/product.dart';
 import '../utils/formatters.dart';
 import '../views/widgets/section_wrapper.dart';
-
-
+import 'dart:async'; // 👈 para o Timer do autoplay
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -31,6 +31,17 @@ class _HomePageState extends State<HomePage> {
   final _cepController = TextEditingController();
   bool _cartOpen = false;
 
+  // 👇 NOVO: controle do carrossel de banners
+  late final PageController _bannerController;
+  int _currentBanner = 0;
+
+  // Lista de banners (você cria essas imagens depois)
+  final List<String> _banners = const [
+    'assets/banners/banner_black_coffee.jpg',
+    'assets/banners/banner_combos.jpg',
+    'assets/banners/banner_novidades.jpg',
+  ];
+
   // Config do site antigo
   static const instagramUrl = 'https://www.instagram.com/fratheli_cafe';
   static const whatsappBase = 'https://wa.me/5527996033401';
@@ -41,12 +52,35 @@ class _HomePageState extends State<HomePage> {
   final _contatoKey = GlobalKey();
 
   @override
+  void initState() {
+    super.initState();
+    _bannerController = PageController();
+    Timer.periodic(const Duration(seconds: 6), (timer) {
+      if (!mounted) return;
+
+      // Só anima se o PageController estiver anexado a um PageView
+      if (!_bannerController.hasClients) return;
+
+      if (_banners.length <= 1) return;
+
+      final next = (_currentBanner + 1) % _banners.length;
+
+      _bannerController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    });
+
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     _cepController.dispose();
+    _bannerController.dispose(); // 👈 não esquecer
     super.dispose();
   }
-
 
   void _scrollTo(GlobalKey key) {
     final ctx = key.currentContext;
@@ -76,6 +110,234 @@ class _HomePageState extends State<HomePage> {
   void _closeCart() {
     setState(() => _cartOpen = false);
   }
+/*
+  // HERO / CARROSSEL DE BANNERS
+  Widget _buildHeroSection(bool isMobile) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1300), // 👈 reduz largura máxima
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 40, // 👈 margem maior em cima/baixo
+            horizontal: 60, // 👈 margem mediana nas laterais
+          ),
+          child: AspectRatio(
+            aspectRatio: 16 / 6.3, // 👈 ligeiramente mais “alto”
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28), // 👈 bordas maiores
+              child: Stack(
+                children: [
+                  // BANNERS
+                  PageView.builder(
+                    controller: _bannerController,
+                    itemCount: _banners.length,
+                    onPageChanged: (index) {
+                      setState(() => _currentBanner = index);
+                    },
+                    itemBuilder: (context, index) {
+                      return Image.asset(
+                        _banners[index],
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  ),
+
+                  // SETA ESQUERDA
+                  if (!isMobile)
+                    Positioned(
+                      left: 12,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _CarouselArrow(
+                          icon: Icons.chevron_left,
+                          onTap: () {
+                            final prev = _currentBanner == 0
+                                ? _banners.length - 1
+                                : _currentBanner - 1;
+                            _bannerController.animateToPage(
+                              prev,
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                  // SETA DIREITA
+                  if (!isMobile)
+                    Positioned(
+                      right: 12,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _CarouselArrow(
+                          icon: Icons.chevron_right,
+                          onTap: () {
+                            final next = (_currentBanner + 1) % _banners.length;
+                            _bannerController.animateToPage(
+                              next,
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                  // INDICADORES
+                  Positioned(
+                    bottom: 16,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(_banners.length, (index) {
+                        final isActive = index == _currentBanner;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: isActive ? 20 : 10,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  */
+
+  // HERO
+  Widget _buildHeroSection(bool isMobile) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1120),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 38),
+          child: Flex(
+            direction: isMobile ? Axis.vertical : Axis.horizontal,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: isMobile ? 0 : 11,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Microlotes de café especial com identidade de montanha',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Cafés de origem única produzidos no Sítio Sombra da Mata, '
+                          'em Alfredo Chaves–ES (700 m), com manejo cuidadoso, '
+                          'torra artesanal e edições exclusivas com mel de abelhas nativas.',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: Colors.grey[400]),
+                    ),
+                    const SizedBox(height: 12),
+                    const Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChipBullet('100% Arábica · Catucaí 2SL · Arara · Catuaí'),
+                        ChipBullet('Microlotes rastreáveis'),
+                        ChipBullet('Venda direta do produtor'),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        AccentButton(
+                          label: 'Comprar pelo WhatsApp',
+                          icon: FontAwesomeIcons.whatsapp,
+                          color: Colors.green,
+                          textColor: Colors.white,
+                          onTap: () {
+                            const msg =
+                                'Olá! Gostaria de saber mais sobre os cafés Frathéli.';
+                            _openWhats(msg);
+                          },
+                        ),
+                        SecondaryButton(
+                          label: 'Conhecer os cafés',
+                          onTap: () => _scrollTo(_cafesKey),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 38, height: 38),
+              Expanded(
+                flex: isMobile ? 0 : 9,
+                child: Align(
+                  alignment:
+                  isMobile ? Alignment.center : Alignment.centerRight,
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      border:
+                      Border.all(color: Colors.white.withOpacity(0.06)),
+                      gradient: const RadialGradient(
+                        center: Alignment.topRight,
+                        radius: 1.2,
+                        colors: [
+                          Color.fromARGB(48, 212, 175, 55),
+                          Colors.transparent,
+                        ],
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black54,
+                          blurRadius: 30,
+                          offset: Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: 380, // 👈 limite para desktop
+                        maxHeight: 450,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          'assets/img/ad_preview.jpg',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
 /*
   Future<void> _calcularFrete(BuildContext context, String cep) async {
     final cart = context.read<CartController>();
@@ -355,8 +617,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
@@ -536,6 +796,9 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(width: 10),
                     AccentButton(
                       label: 'Instagram',
+                      icon: FontAwesomeIcons.instagram,
+                      color: Color(0xFFE1306C),
+                      textColor: Colors.white,
                       onTap: () => _openUrl(instagramUrl),
                     ),
                     const SizedBox(width: 12),
@@ -554,120 +817,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // HERO
-  Widget _buildHeroSection(bool isMobile) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1120),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 38),
-          child: Flex(
-            direction: isMobile ? Axis.vertical : Axis.horizontal,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                flex: isMobile ? 0 : 11,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Microlotes de café especial com identidade de montanha',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Cafés de origem única produzidos no Sítio Sombra da Mata, '
-                          'em Alfredo Chaves–ES (700 m), com manejo cuidadoso, '
-                          'torra artesanal e edições exclusivas com mel de abelhas nativas.',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: Colors.grey[400]),
-                    ),
-                    const SizedBox(height: 12),
-                    const Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ChipBullet('100% Arábica · Catucaí 2SL · Arara · Catuaí'),
-                        ChipBullet('Microlotes rastreáveis'),
-                        ChipBullet('Venda direta do produtor'),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        AccentButton(
-                          label: 'Comprar pelo WhatsApp',
-                          onTap: () {
-                            const msg =
-                                'Olá! Gostaria de saber mais sobre os cafés Frathéli.';
-                            _openWhats(msg);
-                          },
-                        ),
-                        SecondaryButton(
-                          label: 'Conhecer os cafés',
-                          onTap: () => _scrollTo(_cafesKey),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 38, height: 38),
-              Expanded(
-                flex: isMobile ? 0 : 9,
-                child: Align(
-                  alignment:
-                  isMobile ? Alignment.center : Alignment.centerRight,
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      border:
-                      Border.all(color: Colors.white.withOpacity(0.06)),
-                      gradient: const RadialGradient(
-                        center: Alignment.topRight,
-                        radius: 1.2,
-                        colors: [
-                          Color.fromARGB(48, 212, 175, 55),
-                          Colors.transparent,
-                        ],
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black54,
-                          blurRadius: 30,
-                          offset: Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: 380, // 👈 limite para desktop
-                        maxHeight: 450,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.asset(
-                          'assets/img/ad_preview.jpg',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -808,14 +957,15 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 12),
               Text(
                 'O Frathéli Café nasce no Sítio Sombra da Mata, em Alfredo Chaves–ES, '
-                    'região de montanha a 700 m de altitude, com clima ameno, brisas frescas '
+                    'região de montanha acima de 700 m de altitude, com clima ameno, brisas frescas '
                     'e solo propício para cafés doces e complexos.',
                 style: TextStyle(color: Colors.grey[400]),
               ),
               const SizedBox(height: 8),
               Text(
-                'A produção é familiar, com manejo sustentável, respeito às abelhas nativas e foco '
-                    'em microlotes que contam a história da nossa terra na xícara.',
+                  "Cultivamos de forma familiar, com práticas sustentáveis, "
+                      "preservação da natureza e integração com abelhas nativas."
+                      " Cada microlote é rastreável, artesanal e expressa o terroir da nossa região.",
                 style: TextStyle(color: Colors.grey[400]),
               ),
               const SizedBox(height: 12),
@@ -825,8 +975,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   ChipBullet('Cafés de montanha capixaba'),
                   ChipBullet('Catucaí 2SL e seleções especiais'),
-                  ChipBullet(
-                      'Integração com meliponicultura (abelhas nativas)'),
+                  ChipBullet('Integração com meliponicultura (abelhas nativas)'),
                 ],
               ),
             ],
@@ -882,6 +1031,9 @@ class _HomePageState extends State<HomePage> {
             children: [
               AccentButton(
                 label: 'WhatsApp',
+                icon: FontAwesomeIcons.whatsapp,
+                color: Colors.green,
+                textColor: Colors.white,
                 onTap: () {
                   const msg =
                       'Olá! Gostaria de saber mais sobre os cafés Frathéli.';
@@ -987,6 +1139,76 @@ class _HomePageState extends State<HomePage> {
   ];
 }
 
+void showGrindRequiredDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (context) {
+      final width = MediaQuery.of(context).size.width;
+
+      return Dialog(
+        backgroundColor: const Color(0xFF141418),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: 380,   // 👈 limite máximo no desktop
+            minWidth: 280,   // 👈 não deixa ficar pequeno demais
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Selecione uma opção',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Escolha se deseja o café em grãos ou moído antes de adicionar ao carrinho.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD4AF37),
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'Entendi',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class _ProductCard extends StatefulWidget {
   final Product product;
   final void Function(String grind) onAdd; // recebe "Grão" ou "Moído"
@@ -1001,7 +1223,21 @@ class _ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<_ProductCard> {
-  String _selectedGrind = 'Grão'; // valor padrão
+  //String _selectedGrind = 'Grão'; // valor padrão
+  String? _selectedGrind; // começa sem nada
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Se for café que só vende moído, já fixa como "Moído"
+    final sku = widget.product.sku;
+    if (sku == "ROCA-250" || sku == "FLOR-250") {
+      _selectedGrind = "Moído";
+    } else {
+      _selectedGrind = null; // obriga o cliente a escolher
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1178,6 +1414,7 @@ class _ProductCardState extends State<_ProductCard> {
           const SizedBox(height: 10),
 
           // BOTÃO
+    /*
           SizedBox(
             width: double.infinity,
             height: 40,
@@ -1200,6 +1437,44 @@ class _ProductCardState extends State<_ProductCard> {
               ),
             ),
           ),
+          */
+
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: ElevatedButton(
+              onPressed: product.inStock
+                  ? () {
+                final sku = product.sku;
+                final precisaEscolher =
+                    sku != "ROCA-250" && sku != "FLOR-250";
+
+                // Se precisa escolher e ainda não escolheu nada
+                if (precisaEscolher && _selectedGrind == null) {
+                  showGrindRequiredDialog(context);
+                  return;
+                }
+
+                // Para os que são só moído, _selectedGrind já vem "Moído" do initState
+                widget.onAdd(_selectedGrind ?? 'Moído');
+              }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                product.inStock ? const Color(0xFFD4AF37) : Colors.grey[800],
+                foregroundColor:
+                product.inStock ? Colors.black : Colors.white60,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              child: Text(
+                product.inStock ? 'Adicionar ao carrinho' : 'Esgotado',
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ),
+
         ],
       ),
     );
@@ -1466,4 +1741,35 @@ void showProductImageDialog(BuildContext context, Product product) {
     },
   );
 }
+
+class _CarouselArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _CarouselArrow({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withOpacity(0.35),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Icon(
+            icon,
+            size: 26,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
