@@ -351,8 +351,8 @@ class CartDrawer extends StatelessWidget {
                               },
                             ),
 
-
                             const SizedBox(height: 8),
+
                             TextFormField(
                               controller: cpfController,
                               decoration: const InputDecoration(labelText: 'CPF'),
@@ -365,7 +365,6 @@ class CartDrawer extends StatelessWidget {
                                 return null;
                               },
                             ),
-
 
                             const SizedBox(height: 8),
                             TextFormField(

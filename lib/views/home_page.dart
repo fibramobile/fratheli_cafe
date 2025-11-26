@@ -30,6 +30,8 @@ class _HomePageState extends State<HomePage> {
   final _scrollController = ScrollController();
   final _cepController = TextEditingController();
   bool _cartOpen = false;
+  int? _visitas; // contador de visualizações
+  bool _showAllFeedbacks = false;
 
   // 👇 NOVO: controle do carrossel de banners
   late final PageController _bannerController;
@@ -51,6 +53,25 @@ class _HomePageState extends State<HomePage> {
   final _origemKey = GlobalKey();
   final _contatoKey = GlobalKey();
 
+  ///---------------------------------------------------
+  /// 👇 Feedbacks
+  /// --------------------------------------------------
+
+  List<Map<String, dynamic>> _feedbacks = [];
+
+  final _nomeFeedbackController = TextEditingController();
+  final _mensagemFeedbackController = TextEditingController();
+  String? _estadoFeedback;
+
+// Lista simples de estados (UFs)
+  final List<String> _estados = const [
+    'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
+    'MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN',
+    'RS','RO','RR','SC','SP','SE','TO',
+  ];
+
+  ///
+  ///
   @override
   void initState() {
     super.initState();
@@ -72,13 +93,522 @@ class _HomePageState extends State<HomePage> {
       );
     });
 
+    // 👇 carrega quantidade de visitas
+    _carregarVisitas();
+    _carregarFeedbacks(); // 👈 novo
+
   }
+
+  Future<void> _carregarVisitas() async {
+    try {
+      final uri = Uri.parse('https://frathelicafe.com.br/contador_visitas.php');
+      final resp = await http.get(uri);
+
+      if (resp.statusCode != 200) return;
+
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+
+      if (data['ok'] == true && data['total'] != null) {
+        setState(() {
+          _visitas = (data['total'] as num).toInt();
+        });
+      }
+    } catch (e) {
+      // Se der erro, só ignora — não vamos travar o site por causa disso
+      print('Erro ao carregar visitas: $e');
+    }
+  }
+
+  Future<void> _carregarFeedbacks() async {
+    try {
+      final uri = Uri.parse('https://frathelicafe.com.br/feedback_listar.php');
+      final resp = await http.get(uri);
+
+      if (resp.statusCode != 200) return;
+
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      if (data['ok'] == true && data['items'] is List) {
+        setState(() {
+          _feedbacks =
+              (data['items'] as List).cast<Map<String, dynamic>>();
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar feedbacks: $e');
+    }
+  }
+
+  Future<void> _enviarFeedback() async {
+    final nome = _nomeFeedbackController.text.trim();
+    final estado = _estadoFeedback;
+    final mensagem = _mensagemFeedbackController.text.trim();
+
+    if (nome.isEmpty || estado == null || mensagem.isEmpty) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Campos obrigatórios'),
+          content: const Text(
+            'Por favor, preencha seu nome, selecione o estado e escreva seu feedback.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(_).pop(),
+              child: const Text('Ok'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    try {
+      final uri = Uri.parse('https://frathelicafe.com.br/feedback_enviar.php');
+
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'nome': nome,
+          'estado': estado,
+          'mensagem': mensagem,
+        }),
+      );
+
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+
+      if (resp.statusCode == 200 && data['ok'] == true) {
+        // Limpa campos
+        _nomeFeedbackController.clear();
+        _mensagemFeedbackController.clear();
+        setState(() {
+          _estadoFeedback = null;
+        });
+
+        await showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Feedback enviado'),
+            content: const Text(
+              'Obrigado! Seu feedback foi recebido e será exibido no site após aprovação.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(_).pop(),
+                child: const Text('Fechar'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        throw Exception(data['erro'] ?? 'Falha ao enviar feedback');
+      }
+    } catch (e) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Erro'),
+          content: Text('Não foi possível enviar seu feedback.\n\n$e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(_).pop(),
+              child: const Text('Fechar'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+/*
+  Widget _buildFeedbackSection(bool isMobile) {
+    final crossAxisCount = isMobile ? 1 : 2;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'O que dizem sobre os cafés Frathéli',
+          subtitle: 'Depoimentos de quem já sentiu o sabor da nossa montanha na xícara.',
+        ),
+        const SizedBox(height: 18),
+
+        // Lista de feedbacks aprovados
+        if (_feedbacks.isNotEmpty)
+          GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: _feedbacks.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 18,
+              mainAxisSpacing: 18,
+              // cards mais baixinhos
+              childAspectRatio: isMobile ? 3 / 1.6 : 3 / 1.1,
+            ),
+            itemBuilder: (context, index) {
+              final fb = _feedbacks[index];
+              final nome = fb['nome'] ?? '';
+              final estado = fb['estado'] ?? '';
+              final mensagem = fb['mensagem'] ?? '';
+
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF141418),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      mensagem,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '$nome · $estado',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFD4AF37),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          )
+        else
+          const Text(
+            'Ainda não temos feedbacks publicados. Seja o primeiro a compartilhar sua experiência!',
+            style: TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+
+        const SizedBox(height: 28),
+
+        // FORMULÁRIO CENTRALIZADO E MAIS ESTREITO
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Deixe seu feedback',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Nome + UF
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: isMobile ? double.infinity : 260,
+                      child: TextField(
+                        controller: _nomeFeedbackController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: isMobile ? double.infinity : 160,
+                      child: DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Estado (UF)',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: _estadoFeedback,
+                        items: _estados.map((uf) {
+                          return DropdownMenuItem(
+                            value: uf,
+                            child: Text(uf),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() => _estadoFeedback = value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Campo de feedback com altura controlada
+                SizedBox(
+                  height: 140,
+                  child: TextField(
+                    controller: _mensagemFeedbackController,
+                    expands: true,
+                    maxLines: null,
+                    decoration: const InputDecoration(
+                      labelText: 'Seu feedback',
+                      hintText:
+                      'Conte como foi sua experiência com os cafés Frathéli...',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    height: 40,
+                    child: ElevatedButton(
+                      onPressed: _enviarFeedback,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD4AF37),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      child: const Text(
+                        'Enviar feedback',
+                        style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+*/
+  Widget _buildFeedbackSection(bool isMobile) {
+    final crossAxisCount = isMobile ? 1 : 2;
+
+    // 🔁 Ordena para mostrar os mais recentes primeiro
+    final feedbacksOrdered = List<Map<String, dynamic>>.from(_feedbacks.reversed);
+
+    // 🔢 Quantos serão exibidos (4 ou todos)
+    final visibleCount = _showAllFeedbacks
+        ? feedbacksOrdered.length
+        : min(4, feedbacksOrdered.length);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'O que dizem sobre os cafés Frathéli',
+          subtitle: 'Depoimentos de quem já sentiu o sabor da nossa montanha na xícara.',
+        ),
+        const SizedBox(height: 18),
+
+        // Lista de feedbacks aprovados
+        if (feedbacksOrdered.isNotEmpty) ...[
+          GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: visibleCount,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 18,
+              mainAxisSpacing: 18,
+              childAspectRatio: isMobile ? 3 / 1.6 : 3 / 1.1,
+            ),
+            itemBuilder: (context, index) {
+              final fb = feedbacksOrdered[index];
+              final nome = fb['nome'] ?? '';
+              final estado = fb['estado'] ?? '';
+              final mensagem = fb['mensagem'] ?? '';
+
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF141418),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      mensagem,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '$nome · $estado',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFD4AF37),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          // 🔘 Botão Ver mais / Ver menos
+          if (feedbacksOrdered.length > 4)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Center(
+                child: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _showAllFeedbacks = !_showAllFeedbacks;
+                    });
+                  },
+                  child: Text(
+                    _showAllFeedbacks ? 'Ver menos depoimentos' : 'Ver mais depoimentos',
+                    style: const TextStyle(
+                      color: Color(0xFFD4AF37),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ]
+        else
+          const Text(
+            'Ainda não temos feedbacks publicados. Seja o primeiro a compartilhar sua experiência!',
+            style: TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+
+        const SizedBox(height: 28),
+
+        // ---------- FORMULÁRIO (igual ao anterior, mas centralizado/compacto) ----------
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Deixe seu feedback',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: isMobile ? double.infinity : 260,
+                      child: TextField(
+                        controller: _nomeFeedbackController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: isMobile ? double.infinity : 160,
+                      child: DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Estado (UF)',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: _estadoFeedback,
+                        items: _estados.map((uf) {
+                          return DropdownMenuItem(
+                            value: uf,
+                            child: Text(uf),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() => _estadoFeedback = value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                SizedBox(
+                  height: 140,
+                  child: TextField(
+                    controller: _mensagemFeedbackController,
+                    expands: true,
+                    maxLines: null,
+                    decoration: const InputDecoration(
+                      labelText: 'Seu feedback',
+                      hintText:
+                      'Conte como foi sua experiência com os cafés Frathéli...',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    height: 40,
+                    child: ElevatedButton(
+                      onPressed: _enviarFeedback,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD4AF37),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      child: const Text(
+                        'Enviar feedback',
+                        style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+
 
   @override
   void dispose() {
     _scrollController.dispose();
     _cepController.dispose();
     _bannerController.dispose(); // 👈 não esquecer
+    _nomeFeedbackController.dispose();
+    _mensagemFeedbackController.dispose();
     super.dispose();
   }
 
@@ -110,6 +640,7 @@ class _HomePageState extends State<HomePage> {
   void _closeCart() {
     setState(() => _cartOpen = false);
   }
+
 /*
   // HERO / CARROSSEL DE BANNERS
   Widget _buildHeroSection(bool isMobile) {
@@ -337,8 +868,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
-/*
+  /*
   Future<void> _calcularFrete(BuildContext context, String cep) async {
     final cart = context.read<CartController>();
 
@@ -471,6 +1001,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 */
+
   Future<void> _calcularFrete(BuildContext context, String cep) async {
     final cart = context.read<CartController>();
 
@@ -617,6 +1148,9 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  ///----------------------------------------------------
+  ///                     Build Principal
+  /// ----------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
@@ -664,6 +1198,12 @@ class _HomePageState extends State<HomePage> {
                   child: SectionWrapper(
                     key: _origemKey,
                     child: _buildOriginSection(isMobile),
+                  ),
+                ),
+                // 👇 NOVO: feedbacks
+                SliverToBoxAdapter(
+                  child: SectionWrapper(
+                    child: _buildFeedbackSection(isMobile),
                   ),
                 ),
                 SliverToBoxAdapter(
@@ -835,11 +1375,7 @@ class _HomePageState extends State<HomePage> {
   // SEÇÃO CAFÉS
   Widget _buildCafesSection(BuildContext context, bool isMobile) {
     final products = _products;
-    final crossAxisCount = isMobile
-        ? 1
-        : MediaQuery.of(context).size.width < 960
-        ? 2
-        : 3;
+    final crossAxisCount = isMobile ? 1 : MediaQuery.of(context).size.width < 960 ? 2 : 3;
     final cartController = context.read<CartController>();
 
     return Column(
@@ -1054,11 +1590,14 @@ class _HomePageState extends State<HomePage> {
   // FOOTER
   Widget _buildFooter() {
     final year = DateTime.now().year;
+    final visitasTexto = _visitas != null
+        ? ' · $_visitas visitas registradas'
+        : '';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 18),
       child: Center(
         child: Text(
-          '© $year Frathéli Café · Cafés especiais · Alfredo Chaves–ES',
+          '© $year Frathéli Café · Cafés especiais · Alfredo Chaves–ES$visitasTexto',
           style: const TextStyle(
             color: Color(0xFF8F94A3),
             fontSize: 13,
@@ -1103,8 +1642,8 @@ class _HomePageState extends State<HomePage> {
       description:
       "Mel leve, extremamente puro, textura fina e aroma suave. Um dos méis nativos mais apreciados do Brasil.",
       imagePath: "assets/img/cafe_jatai_pack.jpg",
-      price: 44.90,
-      originalPrice: 66.00,
+      price: 42.90,
+      originalPrice: 60.00,
       tag: "LIMITADO",
       tagAlt: false,
       meta: "Produção limitada",
@@ -1130,6 +1669,19 @@ class _HomePageState extends State<HomePage> {
       "Café tradicional das montanhas capixabas, sabor encorpado, notas de chocolate e amendoas. Ideal para o dia a dia.",
       imagePath: "assets/img/cafe_cheiro_de_roca.jpg",
       price: 27.90,
+      originalPrice: 32.00,
+      tag: "Intenso",
+      tagAlt: true,
+      meta: "Sabor de roça",
+      inStock: false,
+    ),
+    Product(
+      sku: "PURE-250",
+      name: "Pure - 250g",
+      description:
+      "Café tradicional das montanhas capixabas, sabor encorpado. Ideal para o dia a dia.",
+      imagePath: "assets/img/cafe_cheiro_de_roca.jpg",
+      price: 25.80,
       originalPrice: 32.00,
       tag: "Intenso",
       tagAlt: true,
@@ -1383,7 +1935,7 @@ class _ProductCardState extends State<_ProductCard> {
           // SELETOR GRÃO / MOÍDO
           Row(
             children: [
-              if (product.sku != "ROCA-250" && product.sku != "FLOR-250")
+              if (product.sku != "ROCA-250" && product.sku != "FLOR-250" && product.sku != "PURE-250")
               Expanded(
                 child: ChoiceChip(
                   label: const Center(child: Text('Grão')),
@@ -1447,14 +1999,13 @@ class _ProductCardState extends State<_ProductCard> {
                   ? () {
                 final sku = product.sku;
                 final precisaEscolher =
-                    sku != "ROCA-250" && sku != "FLOR-250";
+                    sku != "ROCA-250" && sku != "FLOR-250" && sku != "PURE-250";
 
                 // Se precisa escolher e ainda não escolheu nada
                 if (precisaEscolher && _selectedGrind == null) {
                   showGrindRequiredDialog(context);
                   return;
                 }
-
                 // Para os que são só moído, _selectedGrind já vem "Moído" do initState
                 widget.onAdd(_selectedGrind ?? 'Moído');
               }
