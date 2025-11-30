@@ -602,6 +602,84 @@ class _HomePageState extends State<HomePage> {
 
 
 
+  Future<void> _enviarPedidoParaApi(CartController cart) async {
+    final cep = _cepController.text.trim();
+
+    // 🔹 Esses dados vêm do cart.setCustomerData(...) que você já chama no CartDrawer
+    final client = {
+      "name": cart.customerName ?? "",
+      "cpf": cart.customerCpf ?? "",
+      "phone": cart.customerPhone ?? "",
+      "email": "", // se depois você pedir email no form, preenche aqui
+      "address": {
+        // vou colocar tudo no "street" pra não complicar split agora
+        "street": cart.customerAddress ?? "",
+        "number": "",
+        "neighborhood": "",
+        "city": "",
+        "state": "",
+        "cep": cep,
+      }
+    };
+
+    // Itens do carrinho
+    final items = cart.items.map((item) {
+      return {
+        "sku": item.product.sku,
+        "name": "${item.product.name} (${item.grind})",
+        "qty": item.quantity,
+        "unitPrice": item.product.price,
+      };
+    }).toList();
+
+    // 🔹 Agora usando frete real
+    final double shipping = cart.freightValue ?? 0.0;
+    final double total = cart.totalWithFreight;
+
+    //const apiUrl = "https://frathelicafe.com.br/api.php?action=create-order";
+    const apiUrl = "https://smapps.16mb.com/fratheli/site/api.php?action=create-order"; ///TESTE
+
+
+    try {
+      final resp = await http.post(
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "client": client,
+          "items": items,
+          "shipping": shipping,
+          "total": total,
+        }),
+      );
+
+      final data = jsonDecode(resp.body);
+
+      if (resp.statusCode == 200 && data["success"] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Pedido registrado! Nº: ${data["orderId"]}"),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Erro ao registrar pedido: ${data["error"] ?? "tente novamente"}",
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Falha ao enviar pedido: $e"),
+        ),
+      );
+    }
+  }
+
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -1248,6 +1326,25 @@ class _HomePageState extends State<HomePage> {
                 );
                 */
               },
+
+              onCheckout: () async {
+                if (cart.items.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Seu carrinho está vazio.'),
+                    ),
+                  );
+                  return;
+                }
+
+                // 1) Envia o pedido para a API PHP (salva clients.json e orders.json)
+                await _enviarPedidoParaApi(cart);
+
+                // 2) Mantém o fluxo atual pelo WhatsApp (por enquanto)
+                final msg = cart.buildWhatsMessage();
+                _openUrl(_buildWhatsUrl(msg));
+              },
+/*
               onCheckout: () {
                 if (cart.items.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1260,6 +1357,7 @@ class _HomePageState extends State<HomePage> {
                 final msg = cart.buildWhatsMessage();
                 _openUrl(_buildWhatsUrl(msg));
               },
+              */
               onClear: () => context.read<CartController>().clear(),
               onCalculateFreight: (cep) => _calcularFrete(context, cep), // 👈
             ),
