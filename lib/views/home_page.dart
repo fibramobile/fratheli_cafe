@@ -47,7 +47,12 @@ class _HomePageState extends State<HomePage> {
   // Config do site antigo
   static const instagramUrl = 'https://www.instagram.com/fratheli_cafe';
   static const whatsappBase = 'https://wa.me/5527996033401';
+  // Base da API (onde está o api.php)
+  static const String kApiBaseUrl = "https://smapps.16mb.com/fratheli/site";
 
+// Base do site/web (onde está o pagamento_order.html)
+  static const String kWebBaseUrl = "https://smapps.16mb.com/fratheli/fratheli_site_pro_v2";
+//static const String kBaseUrl = "https://frathelicafe.com.br/pagamento...";
   final _cafesKey = GlobalKey();
   final _processoKey = GlobalKey();
   final _origemKey = GlobalKey();
@@ -599,9 +604,7 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
-
-
-
+/*
   Future<void> _enviarPedidoParaApi(CartController cart) async {
     final cep = _cepController.text.trim();
 
@@ -676,6 +679,84 @@ class _HomePageState extends State<HomePage> {
           content: Text("Falha ao enviar pedido: $e"),
         ),
       );
+    }
+  }
+  */
+
+  Future<String?> _enviarPedidoParaApi(CartController cart) async {
+    final cep = _cepController.text.trim();
+
+    final client = {
+      "name": cart.customerName ?? "",
+      "cpf": cart.customerCpf ?? "",
+      "phone": cart.customerPhone ?? "",
+      "email": "",
+      "address": {
+        "street": cart.customerAddress ?? "",
+        "number": "",
+        "neighborhood": "",
+        "city": "",
+        "state": "",
+        "cep": cep,
+      }
+    };
+
+    final items = cart.items.map((item) {
+      return {
+        "sku": item.product.sku,
+        "name": "${item.product.name} (${item.grind})",
+        "qty": item.quantity,
+        "unitPrice": item.product.price,
+      };
+    }).toList();
+
+    final double shipping = cart.freightValue ?? 0.0;
+    final double total = cart.totalWithFreight;
+
+    const apiUrl = "$kApiBaseUrl/api.php?action=create-order";
+
+    try {
+      final resp = await http.post(
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "client": client,
+          "items": items,
+          "shipping": shipping,
+          "total": total,
+        }),
+      );
+
+      final data = jsonDecode(resp.body);
+
+      if (resp.statusCode == 200 && data["success"] == true) {
+        final orderId = data["orderId"] as String?;
+        if (orderId != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Pedido registrado! Nº: $orderId"),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+        return orderId;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Erro ao registrar pedido: ${data["error"] ?? "tente novamente"}",
+            ),
+          ),
+        );
+        return null;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Falha ao enviar pedido: $e"),
+        ),
+      );
+      return null;
     }
   }
 
@@ -1326,7 +1407,7 @@ class _HomePageState extends State<HomePage> {
                 );
                 */
               },
-
+/*
               onCheckout: () async {
                 if (cart.items.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1344,6 +1425,31 @@ class _HomePageState extends State<HomePage> {
                 final msg = cart.buildWhatsMessage();
                 _openUrl(_buildWhatsUrl(msg));
               },
+*/
+              onCheckout: () async {
+                if (cart.items.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Seu carrinho está vazio.'),
+                    ),
+                  );
+                  return;
+                }
+
+                // 1) Registra pedido na API e pega orderId
+                final orderId = await _enviarPedidoParaApi(cart);
+
+                if (orderId == null) {
+                  // se deu erro, não segue
+                  return;
+                }
+
+                // 2) Abre a página de pagamento desse pedido
+                //final url = "https://frathelicafe.com.br/pagamento.html?orderId=$orderId";
+                final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderId";
+                _openUrl(url);
+              },
+
 /*
               onCheckout: () {
                 if (cart.items.isEmpty) {
