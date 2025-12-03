@@ -73,6 +73,8 @@ class CartDrawer extends StatelessWidget {
   }
 */
 
+
+
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
@@ -448,9 +450,11 @@ class CartDrawer extends StatelessWidget {
                 return;
               }
 
-              // 2) CEP válido (sem máscara)
+              // 2) CEP válido (apenas dígitos)
               final cep = cepController.text.trim();
-              final rawCep = cepMask.getUnmaskedText();
+// remove tudo que não for número (tira o "-")
+              final rawCep = cep.replaceAll(RegExp(r'\D'), '');
+
               if (rawCep.length != 8) {
                 showDialog(
                   context: context,
@@ -467,6 +471,7 @@ class CartDrawer extends StatelessWidget {
                 );
                 return;
               }
+
 
               // 3) Frete precisa estar calculado
               if (cart.freightValue == null) {

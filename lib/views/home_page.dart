@@ -33,6 +33,11 @@ class _HomePageState extends State<HomePage> {
   int? _visitas; // contador de visualizações
   bool _showAllFeedbacks = false;
 
+  // --------- PRODUTOS (carregados via JSON) ----------
+  List<Product> _products = [];
+  bool _loadingProducts = true;
+  String? _productsError;
+
   // 👇 NOVO: controle do carrossel de banners
   late final PageController _bannerController;
   int _currentBanner = 0;
@@ -102,8 +107,160 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
     // 👇 carrega quantidade de visitas
     _carregarVisitas();
     _carregarFeedbacks(); // 👈 novo
+    _loadProductsFromJson(); // 👈 AQUI CARREGA OS PRODUTOS
 
   }
+
+  /// ---------------------------------------------------
+  /// CARREGAR PRODUTOS A PARTIR DO JSON DE PRECIFICAÇÃO
+  /// ---------------------------------------------------
+  Future<void> _loadProductsFromJson() async {
+    try {
+      final uri = Uri.parse(
+        'https://smapps.16mb.com/fratheli/app/pricings_data.php',
+      );
+      final resp = await http.get(uri);
+
+      if (resp.statusCode != 200) {
+        throw Exception('HTTP ${resp.statusCode}');
+      }
+
+      final List<dynamic> data = jsonDecode(resp.body) as List<dynamic>;
+
+      // Mapa: nome do produto -> preço final 250g
+      final Map<String, double> price250ByName = {};
+
+      for (final item in data) {
+        final map = item as Map<String, dynamic>;
+        final productName = (map['productName'] as String).trim();
+        final markupPercent = (map['markupPercent'] as num).toDouble();
+        final items = map['items'] as List<dynamic>;
+
+        double totalCostPerKg = 0.0;
+        for (final it in items) {
+          final itMap = it as Map<String, dynamic>;
+          totalCostPerKg += (itMap['costPerKg'] as num).toDouble();
+        }
+
+        // preço de venda por kg = custo * (1 + markup/100)
+        final salePricePerKg = totalCostPerKg * (1 + markupPercent / 100);
+        final price250 = salePricePerKg * 0.25; // 250g = 0.25 kg
+
+        price250ByName[productName] =
+            double.parse(price250.toStringAsFixed(2));
+      }
+
+      // Helper pra não quebrar se não achar algo no JSON
+      double _p(String name, double fallback) {
+        return price250ByName[name] ?? fallback;
+      }
+
+      // Agora montamos a lista de Product usando o JSON
+      final List<Product> loaded = [
+        Product(
+          sku: "BUGIA-250",
+          name: "Mel de Bugia - 250g",
+          description:
+          "Perfil floral intenso, extremamente aromático, notas de ervas frescas e camomila. Mel produzido pela abelha Uruçu Amarela (Bugia).",
+          imagePath: "assets/img/cafe_bugia.jpg",
+          price: _p("Mel de Bugia", 35.90),
+          // preço “antigo” = 15% acima
+          originalPrice: double.parse(
+            (_p("Mel de Bugia", 35.90) * 1.15).toStringAsFixed(2),
+          ),
+          tag: "ORIGEN",
+          tagAlt: false,
+          meta: "Edição especial com mel de abelha nativa",
+          inStock: true,
+        ),
+        Product(
+          sku: "TIUBA-250",
+          name: "Mel de Tiúba - 250g",
+          description:
+          "Sabor marcante, toque frutado com acidez elegante. Mel potiguar muito valorizado pela medicina popular.",
+          imagePath: "assets/img/cafe_tiuba_pack.jpg",
+          price: _p("Mel de Tiúba", 38.90),
+          originalPrice: double.parse(
+            (_p("Mel de Tiúba", 38.90) * 1.15).toStringAsFixed(2),
+          ),
+          tag: "PREMIUM",
+          tagAlt: true,
+          meta: "Abelha Rara – microlote exclusivo",
+          inStock: true,
+        ),
+        Product(
+          sku: "JATAI-250",
+          name: "Mel de Jataí - 250g",
+          description:
+          "Mel leve, extremamente puro, textura fina e aroma suave. Um dos méis nativos mais apreciados do Brasil.",
+          imagePath: "assets/img/cafe_jatai_pack.jpg",
+          price: _p("Mel de Jataí", 42.90),
+          originalPrice: double.parse(
+            (_p("Mel de Jataí", 42.90) * 1.15).toStringAsFixed(2),
+          ),
+          tag: "LIMITADO",
+          tagAlt: false,
+          meta: "Produção limitada",
+          inStock: false,
+        ),
+        Product(
+          sku: "FLOR-250",
+          name: "Flor da Mata - 250g",
+          description:
+          "Café artesanal gourmet com notas doces, corpo médio e finalização limpa. Perfil equilibrado e muito agradável.",
+          imagePath: "assets/img/cafe_flor_da_mata.jpg",
+          price: _p("Flor da Mata", 30.90), // no JSON tem um espaço no fim
+          originalPrice: double.parse(
+            (_p("Flor da Mata", 30.90) * 1.15).toStringAsFixed(2),
+          ),
+          tag: "MICROLOTE",
+          tagAlt: false,
+          meta: "Torra fresca sob demanda",
+          inStock: false,
+        ),
+        // Esses ainda não estão no JSON, então mantemos preço manual por enquanto:
+        Product(
+          sku: "ROCA-250",
+          name: "Cheiro de Roça - 250g",
+          description:
+          "Café tradicional das montanhas capixabas, sabor encorpado, notas de chocolate e amendoas. Ideal para o dia a dia.",
+          imagePath: "assets/img/cafe_cheiro_de_roca.jpg",
+          price: _p("Cheiro de Roça", 27.90),
+          originalPrice: 32.00,
+          tag: "Intenso",
+          tagAlt: true,
+          meta: "Sabor de roça",
+          inStock: false,
+        ),
+        Product(
+          sku: "PURE-250",
+          name: "Pure - 250g",
+          description:
+          "Café tradicional das montanhas capixabas, sabor encorpado. Ideal para o dia a dia.",
+          imagePath: "assets/img/cafe_cheiro_de_roca.jpg",
+          price: _p("Pure", 25.80),
+          originalPrice: 32.00,
+          tag: "Intenso",
+          tagAlt: true,
+          meta: "Sabor clássico do interior",
+          inStock: true,
+        ),
+      ];
+
+      setState(() {
+        _products = loaded;
+        _loadingProducts = false;
+        _productsError = null;
+      });
+    } catch (e) {
+      debugPrint('Erro ao carregar produtos: $e');
+      setState(() {
+        _loadingProducts = false;
+        _productsError = 'Não foi possível carregar os produtos.';
+      });
+    }
+  }
+
 
   Future<void> _carregarVisitas() async {
     try {
@@ -1295,17 +1452,39 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Erro'),
-          content: Text('Não foi possível calcular o frete.\n\n$e'),
+          backgroundColor: const Color(0xFF141418),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'CEP não encontrado',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          content: const Text(
+            'Não conseguimos calcular o frete para este CEP.\n\n'
+                'Verifique se o número está correto e tente novamente.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Fechar'),
+              child: const Text(
+                'Ok, entendi',
+                style: TextStyle(color: Color(0xFFD4AF37)),
+              ),
             ),
           ],
         ),
       );
     }
+
   }
 
   ///----------------------------------------------------
@@ -1578,6 +1757,7 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
   }
 
   // SEÇÃO CAFÉS
+  /*
   Widget _buildCafesSection(BuildContext context, bool isMobile) {
     final products = _products;
     final crossAxisCount = isMobile ? 1 : MediaQuery.of(context).size.width < 960 ? 2 : 3;
@@ -1624,6 +1804,104 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
       ],
     );
   }
+  */
+  Widget _buildCafesSection(BuildContext context, bool isMobile) {
+    final cartController = context.read<CartController>();
+    final crossAxisCount =
+    isMobile ? 1 : MediaQuery.of(context).size.width < 960 ? 2 : 3;
+
+    if (_loadingProducts) {
+      // enquanto busca o JSON, mostra um loading
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_productsError != null) {
+      // se deu erro no carregamento
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(
+            title: 'Cafés especiais Frathéli',
+            subtitle:
+            'Microlotes limitados, perfis sensoriais únicos e torra fresca sob demanda.',
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _productsError!,
+            style: const TextStyle(color: Colors.redAccent),
+          ),
+        ],
+      );
+    }
+
+    if (_products.isEmpty) {
+      // não deu erro, mas veio vazio
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          SectionHeader(
+            title: 'Cafés especiais Frathéli',
+            subtitle:
+            'Microlotes limitados, perfis sensoriais únicos e torra fresca sob demanda.',
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Nenhum produto disponível no momento.',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ],
+      );
+    }
+
+    final products = _products;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Cafés especiais Frathéli',
+          subtitle:
+          'Microlotes limitados, perfis sensoriais únicos e torra fresca sob demanda.',
+        ),
+        const SizedBox(height: 18),
+        GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          itemCount: products.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 18,
+            mainAxisSpacing: 18,
+            childAspectRatio: 4 / 5,
+          ),
+          itemBuilder: (context, index) {
+            final product = products[index];
+            return _ProductCard(
+              product: product,
+              onAdd: (grind) {
+                cartController.addProduct(product, grind);
+                _openCart();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '${product.name} ($grind) adicionado ao carrinho.',
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
 
   // SEÇÃO PROCESSO
   Widget _buildProcessSection(bool isMobile) {
@@ -1812,7 +2090,7 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
       ),
     );
   }
-
+ /*
   // PRODUTOS
   List<Product> get _products => const [
     Product(
@@ -1894,6 +2172,7 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
       inStock: true,
     ),
   ];
+  */
 }
 
 void showGrindRequiredDialog(BuildContext context) {
