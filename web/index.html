@@ -1,38 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
+  <title>Frathéli Café — Cafés especiais, microlotes artesanais de montanha</title>
 
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+  <!-- SEO básico -->
+  <meta name="description" content="Frathéli Café: cafés especiais em microlotes produzidos no Sítio Sombra da Mata, em Alfredo Chaves–ES. Café de montanha, torrado artesanalmente, com opções com mel de abelhas nativas." />
+  <meta name="keywords" content="Frathéli Café, café especial, café artesanal, microlote, café de montanha, Alfredo Chaves, Espírito Santo, café com mel, abelhas nativas" />
+  <meta name="robots" content="index,follow" />
 
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="$FLUTTER_BASE_HREF">
+  <!-- Canonical -->
+  <link rel="canonical" href="https://frathelicafe.com.br/" />
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Site Frathéli Café - Cafés Artesanais">
+  <!-- Open Graph / Social (para WhatsApp, Instagram, etc.) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Frathéli Café — Cafés especiais de montanha" />
+  <meta property="og:description" content="Cafés especiais em microlotes, produzidos no Sítio Sombra da Mata, em Alfredo Chaves–ES. Venda direta do produtor." />
+  <meta property="og:url" content="https://frathelicafe.com.br/" />
+  <meta property="og:image" content="https://frathelicafe.com.br/imagens/og-fratheli-cafe.jpg" />
 
-  <!-- iOS meta tags & icons -->
+  <!-- Twitter Card (opcional, mas ajuda) -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Frathéli Café — Cafés especiais de montanha" />
+  <meta name="twitter:description" content="Microlotes artesanais, terroir de montanha e cafés com mel de abelhas nativas." />
+  <meta name="twitter:image" content="https://frathelicafe.com.br/imagens/og-fratheli-cafe.jpg" />
+
+  <!-- Dados estruturados básicos (JSON-LD) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CafeOrCoffeeShop",
+      "name": "Frathéli Café",
+      "url": "https://frathelicafe.com.br/",
+      "description": "Cafés especiais em microlotes produzidos no Sítio Sombra da Mata, em Alfredo Chaves–ES.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Alfredo Chaves",
+        "addressRegion": "ES",
+        "addressCountry": "BR"
+      }
+    }
+  </script>
+
+  <!-- PWA / ícones / Flutter -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="fratheli_cafe_web">
+  <meta name="apple-mobile-web-app-title" content="Frathéli Café">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="favicon.png" />
 
-  <title>fratheli_cafe_web</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json" />
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+<script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

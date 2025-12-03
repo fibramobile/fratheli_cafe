@@ -48,11 +48,12 @@ class _HomePageState extends State<HomePage> {
   static const instagramUrl = 'https://www.instagram.com/fratheli_cafe';
   static const whatsappBase = 'https://wa.me/5527996033401';
   // Base da API (onde está o api.php)
-  static const String kApiBaseUrl = "https://smapps.16mb.com/fratheli/site";
+  //static const String kApiBaseUrl = "https://smapps.16mb.com/fratheli/site";
+  static const String kApiBaseUrl = "https://frathelicafe.com.br/api";
 
 // Base do site/web (onde está o pagamento_order.html)
-  static const String kWebBaseUrl = "https://smapps.16mb.com/fratheli/fratheli_site_pro_v2";
-//static const String kBaseUrl = "https://frathelicafe.com.br/pagamento...";
+//  static const String kWebBaseUrl = "https://smapps.16mb.com/fratheli/fratheli_site_pro_v2";
+static const String kWebBaseUrl = "https://frathelicafe.com.br";
   final _cafesKey = GlobalKey();
   final _processoKey = GlobalKey();
   final _origemKey = GlobalKey();
