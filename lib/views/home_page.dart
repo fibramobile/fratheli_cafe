@@ -18,6 +18,7 @@ import '../models/product.dart';
 import '../utils/formatters.dart';
 import '../views/widgets/section_wrapper.dart';
 import 'dart:async'; // 👈 para o Timer do autoplay
+import 'package:fratheli_cafe_web/views/widgets/product_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -1910,7 +1911,7 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
           ),
           itemBuilder: (context, index) {
             final product = products[index];
-            return _ProductCard(
+            return ProductCard(
               product: product,
               onAdd: (grind) {
                 cartController.addProduct(product, grind);
@@ -1926,6 +1927,7 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
               },
             );
           },
+
         ),
       ],
     );
