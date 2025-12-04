@@ -110,6 +110,27 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
     _loadProductsFromJson(); // 👈 AQUI CARREGA OS PRODUTOS
 
   }
+  /// ---------------------------------------------------
+  /// CARREGAR PRODUTOS A PARTIR DO JSON DE PRODUTOS
+  /// ---------------------------------------------------
+  Future<List<Product>> fetchCatalogProducts() async {
+    final uri = Uri.parse(
+      'https://smapps.16mb.com/fratheli/app/products/get_products.php',
+    );
+
+
+    final res = await http.get(uri);
+
+    if (res.statusCode != 200) {
+      throw Exception("Erro ao carregar produtos");
+    }
+
+    final decoded = jsonDecode(res.body);
+    final list = decoded["products"] ?? [];
+
+    return list.map<Product>((p) => Product.fromJson(p)).toList();
+  }
+
 
   /// ---------------------------------------------------
   /// CARREGAR PRODUTOS A PARTIR DO JSON DE PRECIFICAÇÃO
@@ -156,6 +177,7 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
       }
 
       // Agora montamos a lista de Product usando o JSON
+      /*
       final List<Product> loaded = [
         Product(
           sku: "BUGIA-250",
@@ -246,9 +268,16 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
           inStock: true,
         ),
       ];
+      */
 
-      setState(() {
-        _products = loaded;
+      final products = await fetchCatalogProducts();
+
+
+
+
+    setState(() {
+       // _products = loaded;
+        _products = products;
         _loadingProducts = false;
         _productsError = null;
       });
