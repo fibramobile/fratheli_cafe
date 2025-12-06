@@ -12,16 +12,16 @@ class Product {
   final String meta;
   final bool inStock;
 
+  final String? pricingName;    // 🔥 novo campo mantido!
   final double weightKg;
   final double heightCm;
   final double widthCm;
   final double lengthCm;
 
-  // NOVOS (por enquanto só guardamos, depois usamos na UI)
-  final String? size;               // "250g", "1kg" etc.
-  final List<String> grindOptions;  // ["Grão", "Moído"]
-  final String? defaultGrind;       // "Grão"
-  final String? stockKey;           // para linkar no estoque
+  final String? size;
+  final List<String> grindOptions;
+  final String? defaultGrind;
+  final String? stockKey;
 
   const Product({
     required this.sku,
@@ -34,6 +34,7 @@ class Product {
     required this.tagAlt,
     required this.meta,
     this.inStock = true,
+    this.pricingName,     // 👈 novo
     this.weightKg = 0.25,
     this.heightCm = 8,
     this.widthCm = 14,
@@ -45,7 +46,12 @@ class Product {
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    final price = (json['price'] ?? json['fallbackPrice'] ?? 0).toDouble();
+    final rawName = json['name'] ?? '';
+    final pricingName = json['pricingName'] ?? '';
+
+    final displayName = pricingName.isNotEmpty
+        ? '$pricingName - $rawName'
+        : rawName;
 
     final grindList = (json['grindOptions'] as List?)
         ?.whereType<String>()
@@ -54,10 +60,10 @@ class Product {
 
     return Product(
       sku: json['sku'] ?? '',
-      name: json['name'] ?? '',
+      name: displayName, // 🔥 título completo
       description: json['description'] ?? '',
       imagePath: json['imagePath'] ?? '',
-      price: price,
+      price: (json['price'] ?? json['fallbackPrice'] ?? 0).toDouble(),
       originalPrice: json['originalPrice'] != null
           ? (json['originalPrice'] as num).toDouble()
           : null,
@@ -65,6 +71,7 @@ class Product {
       tagAlt: json['tagAlt'] ?? false,
       meta: json['meta'] ?? '',
       inStock: json['inStock'] ?? true,
+      pricingName: pricingName, // 🔥 armazenado!
       weightKg: (json['weightKg'] ?? 0.25).toDouble(),
       heightCm: (json['heightCm'] ?? 8).toDouble(),
       widthCm: (json['widthCm'] ?? 14).toDouble(),
