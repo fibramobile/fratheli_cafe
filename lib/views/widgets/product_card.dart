@@ -17,8 +17,29 @@ class ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<ProductCard> {
-  String _selectedGrind = 'Grão'; // padrão
+  String? _selectedGrind; // agora pode ser null, iniciamos no initState
 
+  @override
+  void initState() {
+    super.initState();
+
+    final options = widget.product.grindOptions;
+
+    if (options.isNotEmpty) {
+      // Se tiver defaultGrind e ele estiver na lista, usa.
+      if (widget.product.defaultGrind != null &&
+          options.contains(widget.product.defaultGrind)) {
+        _selectedGrind = widget.product.defaultGrind;
+      } else {
+        // Senão usa a primeira opção (ex.: ["Moído"])
+        _selectedGrind = options.first;
+      }
+    } else {
+      // Produto antigo/sem configuração de moagem -> comportamento antigo
+      _selectedGrind = 'Grão';
+    }
+  }
+/*
   Widget _buildProductImage(Product product, {BoxFit fit = BoxFit.cover}) {
     final path = product.imagePath;
 
@@ -50,19 +71,59 @@ class _ProductCardState extends State<ProductCard> {
       );
     }
 
-    // --- 🎯 CORREÇÃO DO PROBLEMA PRINCIPAL ---
-    // O JSON traz "images/prod_..." ou às vezes só "prod_..."
-    // mas o servidor usa fratheli/app/products/images/
+    // --- CORREÇÃO URL server ---
     String relative = path;
 
-    // se não vier "images/", adicionamos
     if (!relative.startsWith('images/')) {
       relative = "images/$relative";
     }
 
-    // Base CORRETA no servidor
     const base = "https://smapps.16mb.com/fratheli/app/products/";
     final url = "$base$relative";
+
+    debugPrint('🖼️ ProductCard -> path="$path" url="$url"');
+
+    return Image.network(
+      url,
+      fit: fit,
+      errorBuilder: (_, __, ___) => placeholder,
+    );
+  }
+*/
+  Widget _buildProductImage(Product product, {BoxFit fit = BoxFit.cover}) {
+    final path = product.imagePath;
+
+    // placeholder padrão
+    Widget placeholder = Container(
+      color: Colors.black12,
+      child: const Center(
+        child: Icon(Icons.image_not_supported, color: Colors.white38),
+      ),
+    );
+
+    if (path.isEmpty) return placeholder;
+
+    // Já é URL completa
+    if (path.startsWith('http')) {
+      return Image.network(
+        path,
+        fit: fit,
+        errorBuilder: (_, __, ___) => placeholder,
+      );
+    }
+
+    // Asset local
+    if (path.startsWith('assets/')) {
+      return Image.asset(
+        path,
+        fit: fit,
+        errorBuilder: (_, __, ___) => placeholder,
+      );
+    }
+
+    // ⚠️ AGORA: mesmo comportamento do painel
+    const base = "https://smapps.16mb.com/fratheli/app/products/";
+    final url = "$base$path";
 
     debugPrint('🖼️ ProductCard -> path="$path" url="$url"');
 
@@ -77,6 +138,7 @@ class _ProductCardState extends State<ProductCard> {
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
+    final options = product.grindOptions;
 
     // DESCONTO
     final bool hasDiscount =
@@ -104,7 +166,8 @@ class _ProductCardState extends State<ProductCard> {
           Expanded(
             flex: 6,
             child: GestureDetector(
-              onTap: () => showProductImageDialog(context, product, _buildProductImage),
+              onTap: () =>
+                  showProductImageDialog(context, product, _buildProductImage),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
                 child: AspectRatio(
@@ -118,7 +181,7 @@ class _ProductCardState extends State<ProductCard> {
           const SizedBox(height: 8),
 
           // TAG
-          if (product.tag != null && product.tag!.isNotEmpty)
+          if (product.tag.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -128,7 +191,7 @@ class _ProductCardState extends State<ProductCard> {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                product.tag!,
+                product.tag,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -153,9 +216,9 @@ class _ProductCardState extends State<ProductCard> {
           const SizedBox(height: 4),
 
           // META
-          if (product.meta != null && product.meta!.isNotEmpty)
+          if (product.meta.isNotEmpty)
             Text(
-              product.meta!,
+              product.meta,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -212,25 +275,68 @@ class _ProductCardState extends State<ProductCard> {
 
           const SizedBox(height: 8),
 
-          // SELETOR GRÃO / MOÍDO
-          Row(
-            children: [
-              ChoiceChip(
-                label: const Text('Grão'),
-                selected: _selectedGrind == 'Grão',
-                onSelected: (_) {
-                  setState(() => _selectedGrind = 'Grão');
-                },
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('Moído'),
-                selected: _selectedGrind == 'Moído',
-                onSelected: (_) {
-                  setState(() => _selectedGrind = 'Moído');
-                },
-              ),
-            ],
+          // 🔥 SELETOR / INFO DE MOAGEM
+          Builder(
+            builder: (context) {
+              // 1) Sem configuração de moagem → comportamento antigo (dois chips)
+              if (options.isEmpty) {
+                return Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Grão'),
+                      selected: _selectedGrind == 'Grão',
+                      onSelected: (_) {
+                        setState(() => _selectedGrind = 'Grão');
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Moído'),
+                      selected: _selectedGrind == 'Moído',
+                      onSelected: (_) {
+                        setState(() => _selectedGrind = 'Moído');
+                      },
+                    ),
+                  ],
+                );
+              }
+
+              // 2) Apenas uma opção (ex.: ["Moído"])
+              if (options.length == 1) {
+                return  ChoiceChip(
+                  label: const Text('Moído'),
+                  selected: _selectedGrind == 'Moído',
+                  onSelected: (_) {
+                    setState(() => _selectedGrind = 'Moído');
+                  },
+                );
+/*
+                  Text(
+                  options.first,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFF9FA3B3),
+                  ),
+                );*/
+              }
+
+              // 3) Duas ou mais opções → chips dinâmicos (ex.: ["Grão", "Moído"])
+              return Row(
+                children: options.map((opt) {
+                  final selected = _selectedGrind == opt;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(opt),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() => _selectedGrind = opt);
+                      },
+                    ),
+                  );
+                }).toList(),
+              );
+            },
           ),
 
           const SizedBox(height: 10),
@@ -241,7 +347,11 @@ class _ProductCardState extends State<ProductCard> {
             height: 40,
             child: ElevatedButton(
               onPressed: product.inStock
-                  ? () => widget.onAdd(_selectedGrind)
+                  ? () {
+                final grindToSend = _selectedGrind ??
+                    (options.isNotEmpty ? options.first : 'Grão');
+                widget.onAdd(grindToSend);
+              }
                   : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: product.inStock
