@@ -499,6 +499,7 @@ class CartDrawer extends StatelessWidget {
               // 4) Dialog de dados do cliente (igual você já faz)
               final result = await showDialog<Map<String, String>>(
                 context: context,
+                barrierDismissible: false, // ⛔ impede fechar clicando fora
                 builder: (ctx) {
                   final formKey = GlobalKey<FormState>();
                   final nameController = TextEditingController();
