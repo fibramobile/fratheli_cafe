@@ -873,6 +873,7 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
   }
   */
 
+  /*
   Future<String?> _enviarPedidoParaApi(CartController cart) async {
     final cep = _cepController.text.trim();
 
@@ -949,6 +950,149 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
       return null;
     }
   }
+  */
+
+  Future<String?> _enviarPedidoParaApi(CartController cart) async {
+    try {
+      // Se tiver uma constante de base, melhor ainda:
+      // final uri = Uri.parse('$kWebBaseUrl/api/api.php?action=create-order');
+      // Mas pra garantir:
+      final uri = Uri.parse(
+        'https://frathelicafe.com.br/api/api.php?action=create-order',
+      );
+
+      // 1) Monta a lista de itens do carrinho
+      final items = cart.items.map((item) {
+        return {
+          'sku': item.product.sku,
+          'name':
+          '${item.product.pricingName ?? item.product.name} (${item.grind})',
+          'qty': item.quantity,
+          'unitPrice': item.product.price, // ou item.unitPrice se você tiver
+        };
+      }).toList();
+
+      // 2) Monta o payload com frete + cliente
+      final payload = {
+        'items': items,
+        'subtotal': cart.subtotal,
+        'shipping': cart.freightValue ?? 0.0,
+        'shippingService': cart.freightService,     // nome da empresa (JeT, Correios...)
+        'shippingDeadline': cart.freightDeadline,   // prazo (ex: 7 dias úteis)
+        'total': cart.totalWithFreight,
+        'customer': {
+          'name': cart.customerName,
+          'phone': cart.customerPhone,
+          'cpf': cart.customerCpf,
+          'address': cart.customerAddress,
+          'cep': cart.cep, // se tiver esse campo no CartController
+        },
+      };
+
+      debugPrint('>>> [create-order] Enviando payload:');
+      debugPrint(const JsonEncoder.withIndent('  ').convert(payload));
+
+      // 3) Chama a API
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: jsonEncode(payload),
+      );
+
+      debugPrint(
+          '>>> [create-order] HTTP ${response.statusCode} - body: ${response.body}');
+
+      if (!mounted) return null;
+
+      if (response.statusCode != 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Erro ao registrar pedido (HTTP ${response.statusCode}).',
+            ),
+          ),
+        );
+        return null;
+      }
+
+      // 4) Tenta decodificar a resposta
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } catch (e) {
+        debugPrint('>>> [create-order] Erro ao fazer jsonDecode: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resposta inválida da API ao criar o pedido.'),
+          ),
+        );
+        return null;
+      }
+
+      debugPrint('>>> [create-order] decoded: $decoded');
+
+      // 5) Tenta extrair o orderId em VÁRIOS formatos possíveis
+      String? orderId;
+
+      if (decoded is Map) {
+        // Formatos possíveis:
+        // { "success": true, "orderId": "ord_123" }
+        // { "orderId": "ord_123" }
+        // { "id": "ord_123" }
+        // { "order": { "id": "ord_123", ... } }
+        // { "data": { "orderId": "ord_123" } }
+
+        if (decoded['orderId'] != null) {
+          orderId = decoded['orderId'].toString();
+        } else if (decoded['id'] != null) {
+          orderId = decoded['id'].toString();
+        } else if (decoded['order'] is Map &&
+            decoded['order']['id'] != null) {
+          orderId = decoded['order']['id'].toString();
+        } else if (decoded['data'] is Map &&
+            decoded['data']['orderId'] != null) {
+          orderId = decoded['data']['orderId'].toString();
+        }
+      }
+
+      debugPrint('>>> [create-order] orderId extraído = $orderId');
+
+      if (orderId == null || orderId.isEmpty) {
+        // Não conseguimos achar o ID na resposta
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'API não retornou o ID do pedido. Resposta: ${response.body}',
+            ),
+          ),
+        );
+        return null;
+      }
+
+      // tudo certo ✅
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pedido criado com sucesso! ID: $orderId'),
+        ),
+      );
+
+      return orderId;
+    } catch (e, st) {
+      debugPrint('>>> [create-order] Erro ao enviar pedido: $e');
+      debugPrint(st.toString());
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao enviar pedido: $e'),
+        ),
+      );
+      return null;
+    }
+  }
+
+
 
 
   @override
@@ -1638,6 +1782,41 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
                 _openUrl(_buildWhatsUrl(msg));
               },
 */
+
+              onCheckout: () async {
+                // sempre pega o cart atualizado do Provider
+                final cart = context.read<CartController>();
+
+                if (cart.items.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Seu carrinho está vazio.'),
+                    ),
+                  );
+                  return;
+                }
+
+                // 1) Registra pedido na API e pega orderId
+                final orderId = await _enviarPedidoParaApi(cart);
+
+                debugPrint('>>> onCheckout: orderId recebido da API = $orderId');
+
+                if (orderId == null) {
+                  // se deu erro, não segue
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Não foi possível criar o pedido.'),
+                    ),
+                  );
+                  return;
+                }
+
+                // 2) Abre a página de pagamento desse pedido
+                final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderId";
+                debugPrint('>>> Abrindo URL de pagamento: $url');
+                _openUrl(url);
+              },
+/*
               onCheckout: () async {
                 if (cart.items.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1661,7 +1840,7 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
                 final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderId";
                 _openUrl(url);
               },
-
+*/
 /*
               onCheckout: () {
                 if (cart.items.isEmpty) {
@@ -1684,6 +1863,7 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
       ),
     );
   }
+
 
   // HEADER
   Widget _buildHeader(
@@ -1873,9 +2053,9 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
 
     if (_products.isEmpty) {
       // não deu erro, mas veio vazio
-      return Column(
+      return const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           SectionHeader(
             title: 'Cafés especiais Frathéli',
             subtitle:
