@@ -23,57 +23,8 @@ class CartDrawer extends StatelessWidget {
     required this.onCepSaved,
     required this.onCheckout,
     required this.onClear,
-    required this.onCalculateFreight, // 👈
+    required this.onCalculateFreight,
   });
-
-/*
-  Future<Map<String, dynamic>> calcularFrete(String cepDestino) async {
-    final url = Uri.parse('https://frathelicafe.com.br/cotacao_frete.php');
-
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'cep_destino': cepDestino}),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Erro ao calcular frete: ${response.body}');
-    }
-
-    return jsonDecode(response.body);
-  }
-
-  void _mostrarOpcoesFrete(BuildContext context, Map<String, dynamic> dados) {
-    final opcoes = dados['opcoes'] as List<dynamic>;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Opções de frete"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: opcoes.map((op) {
-              return ListTile(
-                title: Text(op['transportadora']),
-                subtitle: Text("Prazo: ${op['prazo']}"),
-                trailing: Text("R\$ ${op['valor']}"),
-              );
-            }).toList(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Fechar"),
-            )
-          ],
-        );
-      },
-    );
-  }
-*/
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -149,14 +100,14 @@ class CartDrawer extends StatelessWidget {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.remove),
-                            onPressed: () =>
-                                cart.changeQty(item.product.sku, item.grind, -1),
+                            onPressed: () => cart.changeQty(
+                                item.product.sku, item.grind, -1),
                           ),
                           Text("${item.quantity}"),
                           IconButton(
                             icon: const Icon(Icons.add),
-                            onPressed: () =>
-                                cart.changeQty(item.product.sku, item.grind, 1),
+                            onPressed: () => cart.changeQty(
+                                item.product.sku, item.grind, 1),
                           ),
                         ],
                       )
@@ -168,52 +119,119 @@ class CartDrawer extends StatelessWidget {
           ),
 
           const SizedBox(height: 8),
-//CEP
-          TextField(
-            controller: cepController,
-            keyboardType: TextInputType.number,
-            inputFormatters: [cepMask],
-            decoration: const InputDecoration(
-              labelText: "CEP",
-              hintText: "00000-000",
-              border: OutlineInputBorder(),
-            ),
-          ),
 
-          const SizedBox(height: 8),
-
-          SizedBox(
+          // ✅ ENTREGA (NOVO)
+          Container(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                final cep = cepController.text.trim();
-                if (cep.length < 8) {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text('CEP inválido'),
-                      content: const Text('Digite um CEP com 8 dígitos para calcular o frete.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Fechar'),
-                        ),
-                      ],
-                    ),
-                  );
-                  return;
-                }
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1B20),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Entrega",
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
 
-                onCepSaved(cep);
-                await onCalculateFreight(cep);
-              },
-              child: const Text("Calcular Frete"),
+                RadioListTile<FreightMode>(
+                  value: FreightMode.calculated,
+                  groupValue: cart.freightMode,
+                  onChanged: (v) {
+                    if (v == null) return;
+                    cart.setCalculatedMode(); // opcional, se você criou
+                  },
+                  title: const Text("Calcular frete pelo CEP"),
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  contentPadding: EdgeInsets.zero,
+                ),
+
+                /*
+                RadioListTile<FreightMode>(
+                  value: FreightMode.free,
+                  groupValue: cart.freightMode,
+                  onChanged: (v) {
+                    if (v == null) return;
+                    cart.setFreeFreight();
+                  },
+                  title: const Text("Frete grátis"),
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                */
+
+                RadioListTile<FreightMode>(
+                  value: FreightMode.combine,
+                  groupValue: cart.freightMode,
+                  onChanged: (v) {
+                    if (v == null) return;
+                    cart.setFreightToCombine();
+                  },
+                  title: const Text("Frete a combinar"),
+                  subtitle: const Text("Você combina/paga no WhatsApp após o pedido."),
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-// Totais
+          // ✅ CEP + CALCULAR FRETE (SÓ SE FOR calculated)
+          if (cart.freightMode == FreightMode.calculated) ...[
+            TextField(
+              controller: cepController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [cepMask],
+              decoration: const InputDecoration(
+                labelText: "CEP",
+                hintText: "00000-000",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final cep = cepController.text.trim();
+                  final rawCep = cep.replaceAll(RegExp(r'\D'), '');
+
+                  if (rawCep.length != 8) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('CEP inválido'),
+                        content: const Text(
+                            'Digite um CEP com 8 dígitos para calcular o frete.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Fechar'),
+                          ),
+                        ],
+                      ),
+                    );
+                    return;
+                  }
+
+                  onCepSaved(cep); // salva com máscara
+                  await onCalculateFreight(rawCep); // manda só números
+                },
+                child: const Text("Calcular Frete"),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Totais
           Column(
             children: [
               Row(
@@ -224,28 +242,39 @@ class CartDrawer extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text("Frete"),
-                  Text(
-                    cart.freightValue != null
-                        ? "${brl(cart.freightValue!)}"
-                        : "a calcular",
-                  ),
+                  Text(() {
+                   // if (cart.freightMode == FreightMode.free) return "grátis";
+                    if (cart.freightMode == FreightMode.combine) return "a combinar";
+
+                    // calculated
+                    return cart.freightValue != null
+                        ? brl(cart.freightValue!)
+                        : "a calcular";
+                  }()),
                 ],
               ),
-              if (cart.freightService != null) ...[
+
+              if ((cart.freightService != null && cart.freightService!.isNotEmpty) ||
+                  (cart.freightDeadline != null && cart.freightDeadline!.isNotEmpty)) ...[
                 const SizedBox(height: 2),
                 Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    "${cart.freightService} (${cart.freightDeadline})",
+                    (cart.freightDeadline != null &&
+                        cart.freightDeadline!.isNotEmpty)
+                        ? "${cart.freightService ?? ''} (${cart.freightDeadline})"
+                        : "${cart.freightService ?? ''}",
                     style: const TextStyle(fontSize: 11, color: Colors.white60),
                     textAlign: TextAlign.right,
                   ),
                 ),
               ],
+
               const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -259,175 +288,10 @@ class CartDrawer extends StatelessWidget {
               ),
             ],
           ),
+
           const SizedBox(height: 16),
-/*
-          ElevatedButton(
-            onPressed: () async {
-              final cart = context.read<CartController>();
 
-              // 1) Verifica se carrinho está vazio
-              if (cart.items.isEmpty) {
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('Carrinho vazio'),
-                    content: const Text('Adicione pelo menos um produto antes de finalizar o pedido.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Fechar'),
-                      ),
-                    ],
-                  ),
-                );
-                return;
-              }
-
-              // 2) Verifica CEP
-              final cep = cepController.text.trim();
-              if (cep.length < 8) {
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('CEP obrigatório'),
-                    content: const Text('Informe um CEP válido para calcular o frete.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Fechar'),
-                      ),
-                    ],
-                  ),
-                );
-                return;
-              }
-
-              // Salva o CEP no controller (você já fazia isso)
-              onCepSaved(cep);
-
-              // 3) Abre diálogo de dados do cliente
-              final result = await showDialog<Map<String, String>>(
-                context: context,
-                builder: (ctx) {
-                  final formKey = GlobalKey<FormState>();
-                  final nameController = TextEditingController();
-                  final phoneController = TextEditingController();
-                  final cpfController = TextEditingController();
-                  final addressController = TextEditingController();
-
-                  return AlertDialog(
-                    backgroundColor: const Color(0xFF141418),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    title: const Text('Dados para envio'),
-                    content: Form(
-                      key: formKey,
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TextFormField(
-                              controller: nameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Nome completo',
-                              ),
-                              validator: (v) {
-                                if (v == null || v.trim().length < 3) {
-                                  return 'Informe o nome completo';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: phoneController,
-                              decoration: const InputDecoration(labelText: 'Telefone (WhatsApp)'),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [phoneMask],
-                              validator: (v) {
-                                if (v == null || v.isEmpty || phoneMask.getUnmaskedText().length < 10) {
-                                  return 'Informe um telefone válido';
-                                }
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            TextFormField(
-                              controller: cpfController,
-                              decoration: const InputDecoration(labelText: 'CPF'),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [cpfMask],
-                              validator: (v) {
-                                if (v == null || v.isEmpty || cpfMask.getUnmaskedText().length != 11) {
-                                  return 'Informe um CPF válido';
-                                }
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: addressController,
-                              decoration: const InputDecoration(
-                                labelText: 'Endereço completo de entrega',
-                                hintText: 'Rua, número, bairro, cidade, UF, complemento',
-                              ),
-                              maxLines: 3,
-                              validator: (v) {
-                                if (v == null || v.trim().length < 10) {
-                                  return 'Descreva o endereço completo';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Cancelar'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          if (formKey.currentState?.validate() ?? false) {
-                            Navigator.of(ctx).pop({
-                              'nome': nameController.text.trim(),
-                              'telefone': phoneController.text.trim(),
-                              'cpf': cpfController.text.trim(),
-                              'endereco': addressController.text.trim(),
-                            });
-                          }
-                        },
-                        child: const Text('Continuar'),
-                      ),
-                    ],
-                  );
-                },
-              );
-
-              // Se o usuário cancelou o diálogo
-              if (result == null) return;
-
-              // 4) Salva no CartController
-              cart.setCustomerData(
-                name: result['nome'] ?? '',
-                phone: result['telefone'] ?? '',
-                cpf: result['cpf'] ?? '',
-                address: result['endereco'] ?? '',
-              );
-
-              // 5) Chama o callback de checkout (que já monta e abre o WhatsApp)
-              onCheckout();
-            },
-            child: const Text("Finalizar pelo WhatsApp"),
-          ),
-          */
-
+          // Finalizar pedido
           ElevatedButton(
             onPressed: () async {
               final cart = context.read<CartController>();
@@ -438,50 +302,8 @@ class CartDrawer extends StatelessWidget {
                   context: context,
                   builder: (_) => AlertDialog(
                     title: const Text('Carrinho vazio'),
-                    content: const Text('Adicione pelo menos um produto antes de finalizar o pedido.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Fechar'),
-                      ),
-                    ],
-                  ),
-                );
-                return;
-              }
-
-              // 2) CEP válido (apenas dígitos)
-              final cep = cepController.text.trim();
-// remove tudo que não for número (tira o "-")
-              final rawCep = cep.replaceAll(RegExp(r'\D'), '');
-
-              if (rawCep.length != 8) {
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('CEP obrigatório'),
-                    content: const Text('Informe um CEP válido para calcular o frete.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Fechar'),
-                      ),
-                    ],
-                  ),
-                );
-                return;
-              }
-
-
-              // 3) Frete precisa estar calculado
-              if (cart.freightValue == null) {
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('Frete não calculado'),
                     content: const Text(
-                      'Calcule e selecione uma opção de frete antes de finalizar o pedido.',
-                    ),
+                        'Adicione pelo menos um produto antes de finalizar o pedido.'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -493,13 +315,56 @@ class CartDrawer extends StatelessWidget {
                 return;
               }
 
-              // Salva o CEP no controller
-              onCepSaved(cep);
+              // ✅ Só exige CEP e frete calculado se o modo for "calculated"
+              if (cart.freightMode == FreightMode.calculated) {
+                final cep = cepController.text.trim();
+                final rawCep = cep.replaceAll(RegExp(r'\D'), '');
 
-              // 4) Dialog de dados do cliente (igual você já faz)
+                if (rawCep.length != 8) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('CEP obrigatório'),
+                      content: const Text(
+                          'Informe um CEP válido para calcular o frete.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Fechar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return;
+                }
+
+                if (cart.freightValue == null) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Frete não calculado'),
+                      content: const Text(
+                        'Calcule o frete antes de finalizar o pedido.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Fechar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return;
+                }
+
+                // Salva o CEP no controller
+                onCepSaved(cep);
+              }
+
+              // Dialog de dados do cliente
               final result = await showDialog<Map<String, String>>(
                 context: context,
-                barrierDismissible: false, // ⛔ impede fechar clicando fora
+                barrierDismissible: false,
                 builder: (ctx) {
                   final formKey = GlobalKey<FormState>();
                   final nameController = TextEditingController();
@@ -551,7 +416,8 @@ class CartDrawer extends StatelessWidget {
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: cpfController,
-                              decoration: const InputDecoration(labelText: 'CPF'),
+                              decoration:
+                              const InputDecoration(labelText: 'CPF'),
                               keyboardType: TextInputType.number,
                               inputFormatters: [cpfMask],
                               validator: (v) {
@@ -568,7 +434,8 @@ class CartDrawer extends StatelessWidget {
                               controller: addressController,
                               decoration: const InputDecoration(
                                 labelText: 'Endereço completo de entrega',
-                                hintText: 'Rua, número, bairro, cidade, UF, complemento',
+                                hintText:
+                                'Rua, número, bairro, cidade, UF, complemento',
                               ),
                               maxLines: 3,
                               validator: (v) {
@@ -619,30 +486,6 @@ class CartDrawer extends StatelessWidget {
             child: const Text("Finalizar pedido"),
           ),
 
-/*
-          ElevatedButton(
-            onPressed: () {
-              if (cepController.text.trim().length < 8) {
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('CEP obrigatório'),
-                    content: const Text('Digite o CEP e calcule o frete antes de finalizar o pedido.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Fechar'),
-                      ),
-                    ],
-                  ),
-                );
-                return;
-              }
-              onCheckout();
-            },
-            child: const Text("Finalizar pelo WhatsApp"),
-          ),
-          */
           TextButton(
             onPressed: onClear,
             child: const Text("Limpar carrinho"),

@@ -14,16 +14,29 @@ class CartItem {
   });
 }
 
+// ✅ NOVO: modos de frete
+enum FreightMode { calculated, free, combine }
+
 class CartController extends ChangeNotifier {
   final List<CartItem> _items = [];
   String? _cep;
+
   List<CartItem> get items => List.unmodifiable(_items);
-  double get subtotal => _items.fold(0.0, (t, item) => t + item.product.price * item.quantity);
+
+  double get subtotal =>
+      _items.fold(0.0, (t, item) => t + item.product.price * item.quantity);
+
   int get totalItems => _items.fold(0, (t, item) => t + item.quantity);
+
   String? get cep => _cep;
+
+  // ✅ NOVO: modo de frete (default = calculado)
+  FreightMode freightMode = FreightMode.calculated;
+
   double? freightValue;
   String? freightService;
   String? freightDeadline;
+
   String? customerName;
   String? customerPhone;
   String? customerCpf;
@@ -42,15 +55,44 @@ class CartController extends ChangeNotifier {
     notifyListeners();
   }
 
-
+  /// ✅ Mantém sua função, mas agora ela "trava" modo calculado
   void setFreight({
     required double value,
     required String service,
     required String prazo,
   }) {
+    freightMode = FreightMode.calculated;
     freightValue = value;
     freightService = service;
     freightDeadline = prazo;
+    notifyListeners();
+  }
+
+  /// ✅ NOVO: setar Frete Grátis
+  void setFreeFreight() {
+    freightMode = FreightMode.free;
+    freightValue = 0.0;
+    freightService = 'Frete grátis';
+    freightDeadline = '';
+    notifyListeners();
+  }
+
+  /// ✅ NOVO: setar "Frete a combinar"
+  void setFreightToCombine() {
+    freightMode = FreightMode.combine;
+    freightValue = 0.0; // não cobra agora
+    freightService = 'Frete a combinar';
+    freightDeadline = '';
+    notifyListeners();
+  }
+
+  /// ✅ NOVO: voltar para modo calculado (opcional)
+  void setCalculatedMode() {
+    freightMode = FreightMode.calculated;
+    // você decide se limpa ou mantém o último frete:
+    // freightValue = null;
+    // freightService = null;
+    // freightDeadline = null;
     notifyListeners();
   }
 
@@ -58,10 +100,19 @@ class CartController extends ChangeNotifier {
     freightValue = null;
     freightService = null;
     freightDeadline = null;
+    // volta para calculado por padrão
+    freightMode = FreightMode.calculated;
     notifyListeners();
   }
 
-  double get totalWithFreight => subtotal + (freightValue ?? 0);
+  /// ✅ NOVO: frete efetivo (o que soma no total)
+  double get effectiveFreight {
+    if (freightMode == FreightMode.free) return 0.0;
+    if (freightMode == FreightMode.combine) return 0.0;
+    return freightValue ?? 0.0;
+  }
+
+  double get totalWithFreight => subtotal + effectiveFreight;
 
   // -------- ADICIONAR PRODUTO (AGORA COM GRIND) --------
   void addProduct(Product product, String grind) {
@@ -100,10 +151,8 @@ class CartController extends ChangeNotifier {
   void clear() {
     _items.clear();
     clearFreight();
-    // se tiver cep salvo e quiser manter, não mexe nele
     notifyListeners();
   }
-
 
   void setCep(String cep) {
     _cep = cep;
@@ -111,8 +160,6 @@ class CartController extends ChangeNotifier {
   }
 
   // -------- MENSAGEM PARA O WHATSAPP --------
-
-
   String buildWhatsMessage() {
     final buffer = StringBuffer();
 
@@ -121,7 +168,7 @@ class CartController extends ChangeNotifier {
 
     for (final item in items) {
       buffer.writeln(
-        '- ${item.quantity}x ${item.product.name} (${item.grind ?? 'Grão/Moído'}) '
+        '- ${item.quantity}x ${item.product.name} (${item.grind}) '
             '— ${brl(item.product.price * item.quantity)}',
       );
     }
@@ -129,20 +176,31 @@ class CartController extends ChangeNotifier {
     buffer.writeln('');
     buffer.writeln('Subtotal: ${brl(subtotal)}');
 
-    if (freightValue != null) {
-      buffer.writeln(
-        'Frete: ${brl(freightValue!)} — $freightService ($freightDeadline)',
-      );
-      buffer.writeln('Total com frete: ${brl(totalWithFreight)}');
+    // ✅ Ajuste para os 3 modos
+    if (freightMode == FreightMode.free) {
+      buffer.writeln('Frete: grátis');
+      buffer.writeln('Total: ${brl(totalWithFreight)}');
+    } else if (freightMode == FreightMode.combine) {
+      buffer.writeln('Frete: a combinar');
+      buffer.writeln('Total (sem frete): ${brl(totalWithFreight)}');
     } else {
-      buffer.writeln('Frete: a calcular');
+      // calculated
+      if (freightValue != null) {
+        buffer.writeln(
+          'Frete: ${brl(freightValue!)} — ${freightService ?? ''}'
+              '${(freightDeadline != null && freightDeadline!.isNotEmpty) ? ' ($freightDeadline)' : ''}',
+        );
+        buffer.writeln('Total com frete: ${brl(totalWithFreight)}');
+      } else {
+        buffer.writeln('Frete: a calcular');
+      }
     }
 
+    // CEP: só faz sentido quando for calculado, mas pode manter se quiser
     if (cep != null && cep!.isNotEmpty) {
       buffer.writeln('CEP de entrega: $cep');
     }
 
-    // 🔻 DADOS DO CLIENTE
     if (customerName != null &&
         customerPhone != null &&
         customerCpf != null &&
@@ -162,7 +220,4 @@ class CartController extends ChangeNotifier {
 
     return buffer.toString();
   }
-
-
-
 }
