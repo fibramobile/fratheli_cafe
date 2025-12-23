@@ -54,18 +54,14 @@ class _HomePageState extends State<HomePage> {
   static const instagramUrl = 'https://www.instagram.com/fratheli_cafe';
   static const whatsappBase = 'https://wa.me/5527996033401';
   // Base da API (onde está o api.php)
-  //static const String kApiBaseUrl = "https://smapps.16mb.com/fratheli/site";
-  static const String kApiBaseUrl = "https://frathelicafe.com.br/api";
+  //static const String kApiBaseUrl = "https://frathelicafe.com.br/api";
+  // Base do site/web (onde está o pagamento_order.html)
+  static const String kWebBaseUrl = "https://frathelicafe.com.br";
 
-// Base do site/web (onde está o pagamento_order.html)
-//  static const String kWebBaseUrl = "https://smapps.16mb.com/fratheli/fratheli_site_pro_v2";
-static const String kWebBaseUrl = "https://frathelicafe.com.br";
   final _cafesKey = GlobalKey();
   final _processoKey = GlobalKey();
   final _origemKey = GlobalKey();
   final _contatoKey = GlobalKey();
-
-
 
   ///---------------------------------------------------
   /// 👇 Feedbacks
@@ -794,164 +790,8 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
       ],
     );
   }
-/*
-  Future<void> _enviarPedidoParaApi(CartController cart) async {
-    final cep = _cepController.text.trim();
-
-    // 🔹 Esses dados vêm do cart.setCustomerData(...) que você já chama no CartDrawer
-    final client = {
-      "name": cart.customerName ?? "",
-      "cpf": cart.customerCpf ?? "",
-      "phone": cart.customerPhone ?? "",
-      "email": "", // se depois você pedir email no form, preenche aqui
-      "address": {
-        // vou colocar tudo no "street" pra não complicar split agora
-        "street": cart.customerAddress ?? "",
-        "number": "",
-        "neighborhood": "",
-        "city": "",
-        "state": "",
-        "cep": cep,
-      }
-    };
-
-    // Itens do carrinho
-    final items = cart.items.map((item) {
-      return {
-        "sku": item.product.sku,
-        "name": "${item.product.name} (${item.grind})",
-        "qty": item.quantity,
-        "unitPrice": item.product.price,
-      };
-    }).toList();
-
-    // 🔹 Agora usando frete real
-    final double shipping = cart.freightValue ?? 0.0;
-    final double total = cart.totalWithFreight;
-
-    //const apiUrl = "https://frathelicafe.com.br/api.php?action=create-order";
-    const apiUrl = "https://smapps.16mb.com/fratheli/site/api.php?action=create-order"; ///TESTE
-
-
-    try {
-      final resp = await http.post(
-        Uri.parse(apiUrl),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "client": client,
-          "items": items,
-          "shipping": shipping,
-          "total": total,
-        }),
-      );
-
-      final data = jsonDecode(resp.body);
-
-      if (resp.statusCode == 200 && data["success"] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Pedido registrado! Nº: ${data["orderId"]}"),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Erro ao registrar pedido: ${data["error"] ?? "tente novamente"}",
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Falha ao enviar pedido: $e"),
-        ),
-      );
-    }
-  }
-  */
 
   /*
-  Future<String?> _enviarPedidoParaApi(CartController cart) async {
-    final cep = _cepController.text.trim();
-
-    final client = {
-      "name": cart.customerName ?? "",
-      "cpf": cart.customerCpf ?? "",
-      "phone": cart.customerPhone ?? "",
-      "email": "",
-      "address": {
-        "street": cart.customerAddress ?? "",
-        "number": "",
-        "neighborhood": "",
-        "city": "",
-        "state": "",
-        "cep": cep,
-      }
-    };
-
-    final items = cart.items.map((item) {
-      return {
-        "sku": item.product.sku,
-        "name": "${item.product.name} (${item.grind})",
-        "qty": item.quantity,
-        "unitPrice": item.product.price,
-      };
-    }).toList();
-
-    final double shipping = cart.freightValue ?? 0.0;
-    final double total = cart.totalWithFreight;
-
-    const apiUrl = "$kApiBaseUrl/api.php?action=create-order";
-
-    try {
-      final resp = await http.post(
-        Uri.parse(apiUrl),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "client": client,
-          "items": items,
-          "shipping": shipping,
-          "total": total,
-        }),
-      );
-
-      final data = jsonDecode(resp.body);
-
-      if (resp.statusCode == 200 && data["success"] == true) {
-        final orderId = data["orderId"] as String?;
-        if (orderId != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Pedido registrado! Nº: $orderId"),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-        return orderId;
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Erro ao registrar pedido: ${data["error"] ?? "tente novamente"}",
-            ),
-          ),
-        );
-        return null;
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Falha ao enviar pedido: $e"),
-        ),
-      );
-      return null;
-    }
-  }
-  */
-
   Future<String?> _enviarPedidoParaApi(CartController cart) async {
     try {
       // Se tiver uma constante de base, melhor ainda:
@@ -1091,9 +931,62 @@ static const String kWebBaseUrl = "https://frathelicafe.com.br";
       return null;
     }
   }
+  */
 
+  Future<String?> _enviarPedidoParaApi(CartController cart) async {
+    try {
+      final items = cart.items.map((item) => {
+        "sku": item.product.sku,
+        "qty": item.quantity,
 
+        // ✅ este é o campo que resolve seu problema:
+        "name": item.product.name, // ex: "Mel de Tiúba - 500g"
 
+        // opcionais (mas úteis)
+        "grind": item.grind,
+        "unitPrice": item.product.price,
+        "lineTotal": item.product.price * item.quantity,
+      }).toList();
+
+      final payload = {
+        "items": items,
+        "subtotal": cart.subtotal,
+        "shipping": cart.effectiveFreight, // ou freightValue
+        "total": cart.totalWithFreight,
+        "freightMode": cart.freightMode.name, // calculated/free/combine
+
+        // cliente (se você já envia hoje, mantenha):
+        "customer": {
+          "name": cart.customerName,
+          "phone": cart.customerPhone,
+          "cpf": cart.customerCpf,
+          "address": cart.customerAddress,
+        },
+
+        // cep (se existir)
+        "cep": cart.cep,
+      };
+
+      // ✅ POST pro seu PHP (use seu endpoint real)
+      final res = await http.post(
+        Uri.parse("https://frathelicafe.com.br/api/api.php?action=create-order"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(payload),
+      );
+
+      final data = jsonDecode(res.body);
+
+      if (res.statusCode == 200 && data["success"] == true) {
+        return data["orderId"]?.toString();
+      }
+
+      debugPrint("Erro create-order: ${res.statusCode} ${res.body}");
+      return null;
+    } catch (e) {
+      debugPrint("Erro ao enviar pedido: $e");
+      return null;
+    }
+  }
 
   @override
   void dispose() {
