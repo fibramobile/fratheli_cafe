@@ -15,7 +15,7 @@ class CartItem {
 }
 
 // ✅ NOVO: modos de frete
-enum FreightMode { calculated, free, combine }
+enum FreightMode { calculated, free, combine, external }
 
 class CartController extends ChangeNotifier {
   final List<CartItem> _items = [];
@@ -32,6 +32,15 @@ class CartController extends ChangeNotifier {
 
   // ✅ NOVO: modo de frete (default = calculado)
   FreightMode freightMode = FreightMode.calculated;
+
+  // ✅ NOVO: Compra externa (título obrigatório)
+  String? externalTitle;
+  String? externalDescription;
+
+  bool get isExternalOk =>
+      freightMode != FreightMode.external ||
+          (externalTitle != null && externalTitle!.trim().isNotEmpty);
+
 
   double? freightValue;
   String? freightService;
@@ -109,12 +118,46 @@ class CartController extends ChangeNotifier {
   double get effectiveFreight {
     if (freightMode == FreightMode.free) return 0.0;
     if (freightMode == FreightMode.combine) return 0.0;
+    if (freightMode == FreightMode.external) return 0.0;
     return freightValue ?? 0.0;
   }
 
+
   double get totalWithFreight => subtotal + effectiveFreight;
 
-  // -------- ADICIONAR PRODUTO (AGORA COM GRIND) --------
+  ///------------------------
+  ///      Pedido externo
+  /// ----------------------
+  void setExternalPurchase({
+    required String title,
+    String? description,
+  }) {
+    freightMode = FreightMode.external;
+
+    externalTitle = title.trim();
+    externalDescription =
+    (description ?? '').trim().isEmpty ? null : description!.trim();
+
+    // Para compra externa: não calcula frete agora
+    freightValue = 0.0;
+    freightService = 'Compra externa';
+    freightDeadline = '';
+
+    notifyListeners();
+  }
+
+  void clearExternalPurchase() {
+    externalTitle = null;
+    externalDescription = null;
+
+    // Se quiser: volta pro modo calculado por padrão
+    freightMode = FreightMode.calculated;
+
+    notifyListeners();
+  }
+
+
+  /// -------- ADICIONAR PRODUTO (AGORA COM GRIND) --------
   void addProduct(Product product, String grind) {
     final index = _items.indexWhere(
           (item) => item.product.sku == product.sku && item.grind == grind,
@@ -176,12 +219,21 @@ class CartController extends ChangeNotifier {
     buffer.writeln('');
     buffer.writeln('Subtotal: ${brl(subtotal)}');
 
-    // ✅ Ajuste para os 3 modos
+    /// --------------------------
+    /// ✅ Ajuste para os modos
+    ///  ------------------------
     if (freightMode == FreightMode.free) {
       buffer.writeln('Frete: grátis');
       buffer.writeln('Total: ${brl(totalWithFreight)}');
     } else if (freightMode == FreightMode.combine) {
       buffer.writeln('Frete: a combinar');
+      buffer.writeln('Total (sem frete): ${brl(totalWithFreight)}');
+    } else if (freightMode == FreightMode.external) {
+      buffer.writeln('Entrega/Compra: compra externa');
+      buffer.writeln('Título: ${externalTitle ?? ''}');
+      if (externalDescription != null && externalDescription!.isNotEmpty) {
+        buffer.writeln('Descrição: $externalDescription');
+      }
       buffer.writeln('Total (sem frete): ${brl(totalWithFreight)}');
     } else {
       // calculated
@@ -195,6 +247,7 @@ class CartController extends ChangeNotifier {
         buffer.writeln('Frete: a calcular');
       }
     }
+
 
     // CEP: só faz sentido quando for calculado, mas pode manter se quiser
     if (cep != null && cep!.isNotEmpty) {

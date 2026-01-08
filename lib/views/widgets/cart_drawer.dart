@@ -26,6 +26,78 @@ class CartDrawer extends StatelessWidget {
     required this.onCalculateFreight,
   });
 
+  Future<void> showExternalPurchaseDialog(BuildContext context) async {
+    final cart = context.read<CartController>();
+
+    final titleCtrl = TextEditingController(text: cart.externalTitle ?? '');
+    final descCtrl = TextEditingController(text: cart.externalDescription ?? '');
+
+    String? error;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            return AlertDialog(
+              title: const Text('Compra externa'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleCtrl,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      labelText: 'Título *',
+                      hintText: 'Ex: Retirada na loja / Compra via Instagram',
+                      errorText: error,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descCtrl,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Descrição (opcional)',
+                      hintText: 'Detalhes…',
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    // volta pro calculado (ou mantenha como estava)
+                    cart.setCalculatedMode();
+                  },
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final t = titleCtrl.text.trim();
+                    if (t.isEmpty) {
+                      setLocal(() => error = 'Título é obrigatório');
+                      return;
+                    }
+                    cart.setExternalPurchase(
+                      title: t,
+                      description: descCtrl.text,
+                    );
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('Salvar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
@@ -178,6 +250,25 @@ class CartDrawer extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   contentPadding: EdgeInsets.zero,
                 ),
+                RadioListTile<FreightMode>(
+                  value: FreightMode.external,
+                  groupValue: cart.freightMode,
+                  onChanged: (_) async {
+                    // marca e abre o dialog
+                    cart.freightMode = FreightMode.external;
+                    cart.notifyListeners(); // se preferir, crie um setFreightMode()
+                    await showExternalPurchaseDialog(context);
+                  },
+                  title: const Text('Compra externa'),
+                  subtitle: Text(
+                    cart.externalTitle?.isNotEmpty == true
+                        ? 'Título: ${cart.externalTitle}'
+                        : 'Informe um título (obrigatório).',
+                  ),
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  contentPadding: EdgeInsets.zero,
+                ),
               ],
             ),
           ),
@@ -303,7 +394,8 @@ class CartDrawer extends StatelessWidget {
                   builder: (_) => AlertDialog(
                     title: const Text('Carrinho vazio'),
                     content: const Text(
-                        'Adicione pelo menos um produto antes de finalizar o pedido.'),
+                      'Adicione pelo menos um produto antes de finalizar o pedido.',
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -315,7 +407,18 @@ class CartDrawer extends StatelessWidget {
                 return;
               }
 
-              // ✅ Só exige CEP e frete calculado se o modo for "calculated"
+              // 2) Compra externa: exige título e vai DIRETO pro Pix (bypass dados)
+              if (cart.freightMode == FreightMode.external) {
+                if (!cart.isExternalOk) {
+                  await showExternalPurchaseDialog(context);
+                  if (!cart.isExternalOk) return;
+                }
+
+                onCheckout(); // ✅ direto Pix
+                return;
+              }
+
+              // 3) Só exige CEP e frete calculado se o modo for "calculated"
               if (cart.freightMode == FreightMode.calculated) {
                 final cep = cepController.text.trim();
                 final rawCep = cep.replaceAll(RegExp(r'\D'), '');
@@ -325,8 +428,7 @@ class CartDrawer extends StatelessWidget {
                     context: context,
                     builder: (_) => AlertDialog(
                       title: const Text('CEP obrigatório'),
-                      content: const Text(
-                          'Informe um CEP válido para calcular o frete.'),
+                      content: const Text('Informe um CEP válido para calcular o frete.'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
@@ -343,9 +445,7 @@ class CartDrawer extends StatelessWidget {
                     context: context,
                     builder: (_) => AlertDialog(
                       title: const Text('Frete não calculado'),
-                      content: const Text(
-                        'Calcule o frete antes de finalizar o pedido.',
-                      ),
+                      content: const Text('Calcule o frete antes de finalizar o pedido.'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
@@ -361,113 +461,173 @@ class CartDrawer extends StatelessWidget {
                 onCepSaved(cep);
               }
 
-              // Dialog de dados do cliente
+              // 4) Para os outros modos (calculated/free/combine): pede dados do cliente
               final result = await showDialog<Map<String, String>>(
                 context: context,
                 barrierDismissible: false,
                 builder: (ctx) {
                   final formKey = GlobalKey<FormState>();
+
                   final nameController = TextEditingController();
                   final phoneController = TextEditingController();
                   final cpfController = TextEditingController();
                   final addressController = TextEditingController();
 
-                  return AlertDialog(
-                    backgroundColor: const Color(0xFF141418),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    title: const Text('Dados para envio'),
-                    content: Form(
-                      key: formKey,
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TextFormField(
-                              controller: nameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Nome completo',
-                              ),
-                              validator: (v) {
-                                if (v == null || v.trim().length < 3) {
-                                  return 'Informe o nome completo';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: phoneController,
-                              decoration: const InputDecoration(
-                                labelText: 'Telefone (WhatsApp)',
-                              ),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [phoneMask],
-                              validator: (v) {
-                                if (v == null ||
-                                    v.isEmpty ||
-                                    phoneMask.getUnmaskedText().length < 10) {
-                                  return 'Informe um telefone válido';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: cpfController,
-                              decoration:
-                              const InputDecoration(labelText: 'CPF'),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [cpfMask],
-                              validator: (v) {
-                                if (v == null ||
-                                    v.isEmpty ||
-                                    cpfMask.getUnmaskedText().length != 11) {
-                                  return 'Informe um CPF válido';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: addressController,
-                              decoration: const InputDecoration(
-                                labelText: 'Endereço completo de entrega',
-                                hintText:
-                                'Rua, número, bairro, cidade, UF, complemento',
-                              ),
-                              maxLines: 3,
-                              validator: (v) {
-                                if (v == null || v.trim().length < 10) {
-                                  return 'Descreva o endereço completo';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
+                  bool isLogging = false;
+                  bool isLogged = false;
+
+                  void fillFields({
+                    required String nome,
+                    required String telefone,
+                    required String cpf,
+                    required String endereco,
+                  }) {
+                    nameController.text = nome;
+                    phoneController.text = telefone;
+                    cpfController.text = cpf;
+                    addressController.text = endereco;
+                  }
+
+                  return StatefulBuilder(
+                    builder: (ctx, setState) {
+                      Future<void> handleLogin() async {
+                        try {
+                          setState(() => isLogging = true);
+
+                          // EXEMPLO (simulado):
+                          await Future.delayed(const Duration(milliseconds: 400));
+                          fillFields(
+                            nome: "Francis do Nascimento Soares",
+                            telefone: "(27) 99999-9999",
+                            cpf: "000.000.000-00",
+                            endereco: "Rua X, 123, Bairro Y, Alfredo Chaves - ES",
+                          );
+
+                          setState(() => isLogged = true);
+                        } finally {
+                          if (ctx.mounted) setState(() => isLogging = false);
+                        }
+                      }
+
+                      return AlertDialog(
+                        backgroundColor: const Color(0xFF141418),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Cancelar'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          if (formKey.currentState?.validate() ?? false) {
-                            Navigator.of(ctx).pop({
-                              'nome': nameController.text.trim(),
-                              'telefone': phoneController.text.trim(),
-                              'cpf': cpfController.text.trim(),
-                              'endereco': addressController.text.trim(),
-                            });
-                          }
-                        },
-                        child: const Text('Continuar'),
-                      ),
-                    ],
+                        title: const Text('Dados para envio'),
+                        content: Form(
+                          key: formKey,
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        isLogged
+                                            ? "✅ Logado (dados preenchidos)"
+                                            : "Quer preencher automático?",
+                                        style: const TextStyle(color: Colors.white70),
+                                      ),
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: isLogging ? null : handleLogin,
+                                      icon: isLogging
+                                          ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                          : const Icon(Icons.login),
+                                      label: Text(isLogging ? "Entrando..." : "Entrar"),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+
+                                TextFormField(
+                                  controller: nameController,
+                                  decoration: const InputDecoration(labelText: 'Nome completo'),
+                                  validator: (v) {
+                                    if (v == null || v.trim().length < 3) {
+                                      return 'Informe o nome completo';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  controller: phoneController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Telefone (WhatsApp)',
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [phoneMask],
+                                  validator: (v) {
+                                    if (v == null ||
+                                        v.isEmpty ||
+                                        phoneMask.getUnmaskedText().length < 10) {
+                                      return 'Informe um telefone válido';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  controller: cpfController,
+                                  decoration: const InputDecoration(labelText: 'CPF'),
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [cpfMask],
+                                  validator: (v) {
+                                    if (v == null ||
+                                        v.isEmpty ||
+                                        cpfMask.getUnmaskedText().length != 11) {
+                                      return 'Informe um CPF válido';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  controller: addressController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Endereço completo de entrega',
+                                    hintText: 'Rua, número, bairro, cidade, UF, complemento',
+                                  ),
+                                  maxLines: 3,
+                                  validator: (v) {
+                                    if (v == null || v.trim().length < 10) {
+                                      return 'Descreva o endereço completo';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('Cancelar'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (formKey.currentState?.validate() ?? false) {
+                                Navigator.of(ctx).pop({
+                                  'nome': nameController.text.trim(),
+                                  'telefone': phoneController.text.trim(),
+                                  'cpf': cpfController.text.trim(),
+                                  'endereco': addressController.text.trim(),
+                                });
+                              }
+                            },
+                            child: const Text('Continuar'),
+                          ),
+                        ],
+                      );
+                    },
                   );
                 },
               );
@@ -485,6 +645,7 @@ class CartDrawer extends StatelessWidget {
             },
             child: const Text("Finalizar pedido"),
           ),
+
 
           TextButton(
             onPressed: onClear,
