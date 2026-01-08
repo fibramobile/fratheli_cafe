@@ -413,7 +413,7 @@ class CartDrawer extends StatelessWidget {
                   await showExternalPurchaseDialog(context);
                   if (!cart.isExternalOk) return;
                 }
-
+                cart.customerName = cart.externalTitle?.trim(); // ✅ título vira nome
                 onCheckout(); // ✅ direto Pix
                 return;
               }
