@@ -250,6 +250,7 @@ class CartDrawer extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   contentPadding: EdgeInsets.zero,
                 ),
+                /*
                 RadioListTile<FreightMode>(
                   value: FreightMode.external,
                   groupValue: cart.freightMode,
@@ -269,6 +270,7 @@ class CartDrawer extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   contentPadding: EdgeInsets.zero,
                 ),
+                */
               ],
             ),
           ),
@@ -531,6 +533,7 @@ class CartDrawer extends StatelessWidget {
                                         style: const TextStyle(color: Colors.white70),
                                       ),
                                     ),
+                                    /*
                                     ElevatedButton.icon(
                                       onPressed: isLogging ? null : handleLogin,
                                       icon: isLogging
@@ -542,6 +545,7 @@ class CartDrawer extends StatelessWidget {
                                           : const Icon(Icons.login),
                                       label: Text(isLogging ? "Entrando..." : "Entrar"),
                                     ),
+                                    */
                                   ],
                                 ),
                                 const SizedBox(height: 12),

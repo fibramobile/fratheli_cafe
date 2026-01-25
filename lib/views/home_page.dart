@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:fratheli_cafe_web/views/widgets/accent_button.dart';
@@ -11,6 +12,7 @@ import 'package:fratheli_cafe_web/views/widgets/header_link.dart';
 import 'package:fratheli_cafe_web/views/widgets/secondary_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/section_header.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:http/http.dart' as http;
 import '../controllers/cart_controller.dart';
@@ -1707,7 +1709,9 @@ class _HomePageState extends State<HomePage> {
                 // 2) Abre a página de pagamento desse pedido
                 final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderId";
                 debugPrint('>>> Abrindo URL de pagamento: $url');
-                _openUrl(url);
+                //_openUrl(url);
+                await _openUrlExternal(url);
+
               },
 /*
               onCheckout: () async {
@@ -1755,6 +1759,27 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  Future<void> _openUrlExternal(String url) async {
+    final uri = Uri.parse(url.trim());
+
+    // ✅ WEB: abre na mesma aba / nova aba conforme você preferir
+    if (kIsWeb) {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+      return;
+    }
+
+    // ✅ ANDROID/iOS: abre no navegador (Chrome/Safari)
+    final ok = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!ok) {
+      // fallback: abre dentro do app
+      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    }
   }
 
 
