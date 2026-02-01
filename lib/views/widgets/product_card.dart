@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/material.dart';
 import '../../models/product.dart';
 import '../../utils/formatters.dart';
@@ -415,6 +416,381 @@ void showProductImageDialog(
               child: IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.close, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+
+ */
+import 'package:flutter/material.dart';
+import '../../models/product.dart';
+import '../../utils/formatters.dart';
+import '../../theme/fratheli_colors.dart';
+
+class ProductCard extends StatefulWidget {
+  final Product product;
+  final void Function(String grind) onAdd;
+
+  const ProductCard({
+    super.key,
+    required this.product,
+    required this.onAdd,
+  });
+
+  @override
+  State<ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<ProductCard> {
+  String? _selectedGrind;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final options = widget.product.grindOptions;
+    if (options.isNotEmpty) {
+      if (widget.product.defaultGrind != null &&
+          options.contains(widget.product.defaultGrind)) {
+        _selectedGrind = widget.product.defaultGrind;
+      } else {
+        _selectedGrind = options.first;
+      }
+    } else {
+      _selectedGrind = 'Grão';
+    }
+  }
+
+  Widget _buildProductImage(Product product, {BoxFit fit = BoxFit.cover}) {
+    final path = product.imagePath;
+
+    Widget placeholder = Container(
+      color: FratheliColors.surfaceAlt,
+      child: const Center(
+        child: Icon(Icons.image_not_supported, color: FratheliColors.text3),
+      ),
+    );
+
+    if (path.isEmpty) return placeholder;
+
+    if (path.startsWith('http')) {
+      return Image.network(path, fit: fit, errorBuilder: (_, __, ___) => placeholder);
+    }
+
+    if (path.startsWith('assets/')) {
+      return Image.asset(path, fit: fit, errorBuilder: (_, __, ___) => placeholder);
+    }
+
+    const base = "https://smapps.16mb.com/fratheli/app/products/";
+    final url = "$base$path";
+
+    return Image.network(url, fit: fit, errorBuilder: (_, __, ___) => placeholder);
+  }
+
+  ChoiceChip _grindChip(String label) {
+    final selected = _selectedGrind == label;
+
+    return ChoiceChip(
+      selected: selected,
+      backgroundColor: const Color(0xFFEFE9DF),      // chip claro (não selecionado)
+      selectedColor: const Color(0xFF3B2E1A),        // chip escuro (selecionado)
+      side: BorderSide(
+        color: selected ? Colors.transparent : const Color(0xFFBFB7AA),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      label: Center(
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : Colors.black87, // ✅ AQUI MUDA
+          ),
+        ),
+      ),
+      onSelected: (_) => setState(() => _selectedGrind = label),
+    );
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    final product = widget.product;
+    final options = product.grindOptions;
+
+    final hasDiscount =
+        product.originalPrice != null && product.originalPrice! > product.price;
+
+    int? discountPercent;
+    if (hasDiscount) {
+      discountPercent = (((product.originalPrice! - product.price) / product.originalPrice!) * 100).round();
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: FratheliColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: FratheliColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 6,
+            child: GestureDetector(
+              onTap: () => showProductImageDialog(context, product, _buildProductImage),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: AspectRatio(
+                  aspectRatio: 3 / 4,
+                  child: _buildProductImage(product),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          if (product.tag.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: product.tagAlt ? FratheliColors.gold : FratheliColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: FratheliColors.border),
+              ),
+              child: Text(
+                product.tag,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: product.tagAlt ? Colors.black : FratheliColors.text,
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            product.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              color: FratheliColors.text,
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          if (product.meta.isNotEmpty)
+            Text(
+              product.meta,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                color: FratheliColors.text2,
+              ),
+            ),
+
+          const SizedBox(height: 10),
+
+          if (hasDiscount) ...[
+            Row(
+              children: [
+                Text(
+                  brl(product.originalPrice!),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: FratheliColors.text3,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: FratheliColors.green,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    "-$discountPercent%",
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          Text(
+            brl(product.price),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: FratheliColors.gold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+/*
+          Builder(
+            builder: (_) {
+              if (options.isEmpty) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('Grão')),
+                        selected: _selectedGrind == 'Grão',
+                        onSelected: (_) => setState(() => _selectedGrind = 'Grão'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('Moído')),
+                        selected: _selectedGrind == 'Moído',
+                        onSelected: (_) => setState(() => _selectedGrind = 'Moído'),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              if (options.length == 1) {
+                return ChoiceChip(
+                  label: Text(options.first),
+                  selected: _selectedGrind == options.first,
+                  onSelected: (_) => setState(() => _selectedGrind = options.first),
+                );
+              }
+
+              return Row(
+                children: options.map((opt) {
+                  final selected = _selectedGrind == opt;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(opt),
+                      selected: selected,
+                      onSelected: (_) => setState(() => _selectedGrind = opt),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          */
+          Builder(
+            builder: (_) {
+              if (options.isEmpty) {
+                return Row(
+                  children: [
+                    Expanded(child: _grindChip('Grão')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _grindChip('Moído')),
+                  ],
+                );
+              }
+
+              if (options.length == 1) {
+                return _grindChip(options.first);
+              }
+
+              return Row(
+                children: options.map((opt) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _grindChip(opt),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+
+
+          const SizedBox(height: 12),
+
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: ElevatedButton(
+              onPressed: product.inStock
+                  ? () {
+                final grindToSend = _selectedGrind ?? (options.isNotEmpty ? options.first : 'Grão');
+                widget.onAdd(grindToSend);
+              }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: product.inStock ? FratheliColors.gold : const Color(0xFFE5E1D8),
+                foregroundColor: product.inStock ? Colors.black : FratheliColors.text3,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+              ),
+              child: Text(product.inStock ? 'Adicionar ao carrinho' : 'Esgotado'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+void showProductImageDialog(
+    BuildContext context,
+    Product product,
+    Widget Function(Product, {BoxFit fit}) builder,
+    ) {
+  showDialog(
+    context: context,
+    barrierColor: Colors.black54,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(24),
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: FratheliColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: FratheliColors.border),
+              ),
+              child: InteractiveViewer(
+                minScale: 0.9,
+                maxScale: 3.0,
+                child: AspectRatio(
+                  aspectRatio: 3 / 4,
+                  child: builder(product, fit: BoxFit.contain),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, color: FratheliColors.text),
               ),
             ),
           ],

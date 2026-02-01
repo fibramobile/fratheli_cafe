@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 import 'package:http/http.dart' as http;
 import '../controllers/cart_controller.dart';
 import '../models/product.dart';
+import '../theme/fratheli_colors.dart';
 import '../utils/formatters.dart';
 import '../views/widgets/section_wrapper.dart';
 import 'dart:async'; // 👈 para o Timer do autoplay
@@ -589,210 +590,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 */
-  Widget _buildFeedbackSection(bool isMobile) {
-    final crossAxisCount = isMobile ? 1 : 2;
-
-    // 🔁 Ordena para mostrar os mais recentes primeiro
-    final feedbacksOrdered = List<Map<String, dynamic>>.from(_feedbacks.reversed);
-
-    // 🔢 Quantos serão exibidos (4 ou todos)
-    final visibleCount = _showAllFeedbacks
-        ? feedbacksOrdered.length
-        : min(4, feedbacksOrdered.length);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(
-          title: 'O que dizem sobre os cafés Frathéli',
-          subtitle: 'Depoimentos de quem já sentiu o sabor da nossa montanha na xícara.',
-        ),
-        const SizedBox(height: 18),
-
-        // Lista de feedbacks aprovados
-        if (feedbacksOrdered.isNotEmpty) ...[
-          GridView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            itemCount: visibleCount,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 18,
-              mainAxisSpacing: 18,
-              childAspectRatio: isMobile ? 3 / 1.6 : 3 / 1.1,
-            ),
-            itemBuilder: (context, index) {
-              final fb = feedbacksOrdered[index];
-              final nome = fb['nome'] ?? '';
-              final estado = fb['estado'] ?? '';
-              final mensagem = fb['mensagem'] ?? '';
-
-              return Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF141418),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      mensagem,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '$nome · $estado',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFD4AF37),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          // 🔘 Botão Ver mais / Ver menos
-          if (feedbacksOrdered.length > 4)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Center(
-                child: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _showAllFeedbacks = !_showAllFeedbacks;
-                    });
-                  },
-                  child: Text(
-                    _showAllFeedbacks ? 'Ver menos depoimentos' : 'Ver mais depoimentos',
-                    style: const TextStyle(
-                      color: Color(0xFFD4AF37),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ]
-        else
-          const Text(
-            'Ainda não temos feedbacks publicados. Seja o primeiro a compartilhar sua experiência!',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
-          ),
-
-        const SizedBox(height: 28),
-
-        // ---------- FORMULÁRIO (igual ao anterior, mas centralizado/compacto) ----------
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Deixe seu feedback',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    SizedBox(
-                      width: isMobile ? double.infinity : 260,
-                      child: TextField(
-                        controller: _nomeFeedbackController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nome',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: isMobile ? double.infinity : 160,
-                      child: DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Estado (UF)',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: _estadoFeedback,
-                        items: _estados.map((uf) {
-                          return DropdownMenuItem(
-                            value: uf,
-                            child: Text(uf),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() => _estadoFeedback = value);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                SizedBox(
-                  height: 140,
-                  child: TextField(
-                    controller: _mensagemFeedbackController,
-                    expands: true,
-                    maxLines: null,
-                    decoration: const InputDecoration(
-                      labelText: 'Seu feedback',
-                      hintText:
-                      'Conte como foi sua experiência com os cafés Frathéli...',
-                      border: OutlineInputBorder(),
-                      alignLabelWithHint: true,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SizedBox(
-                    height: 40,
-                    child: ElevatedButton(
-                      onPressed: _enviarFeedback,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD4AF37),
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                      child: const Text(
-                        'Enviar feedback',
-                        style:
-                        TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   /*
   Future<String?> _enviarPedidoParaApi(CartController cart) async {
     try {
@@ -949,7 +746,7 @@ class _HomePageState extends State<HomePage> {
         "unitPrice": item.product.price,
         "lineTotal": item.product.price * item.quantity,
       }).toList();
-
+/*
       final payload = {
         "items": items,
         "subtotal": cart.subtotal,
@@ -968,6 +765,34 @@ class _HomePageState extends State<HomePage> {
         // cep (se existir)
         "cep": cart.cep,
       };
+      */
+
+      final payload = {
+        "items": items,
+        "subtotal": cart.subtotal,
+
+        // ✅ mantém shipping/total
+        "shipping": cart.effectiveFreight,
+        "total": cart.totalWithFreight,
+
+        // ✅ MODO (você já envia)
+        "freightMode": cart.freightMode.name,
+
+        // ✅ ADICIONE ISSO (nomes iguais ao JSON da API)
+        "shippingService": cart.freightService,     // ex: "JeT - Standard"
+        "shippingDeadline": cart.freightDeadline,   // ex: "2 dias úteis"
+
+        "customer": {
+          "name": cart.customerName,
+          "phone": cart.customerPhone,
+          "cpf": cart.customerCpf,
+          "address": cart.customerAddress,
+        },
+
+        "cep": cart.cep,
+      };
+
+
 
       // ✅ POST pro seu PHP (use seu endpoint real)
       final res = await http.post(
@@ -1168,7 +993,7 @@ class _HomePageState extends State<HomePage> {
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
-                          ?.copyWith(color: Colors.grey[400]),
+                          ?.copyWith(color: FratheliColors.text2),
                     ),
                     const SizedBox(height: 12),
                     const Wrap(
@@ -1255,6 +1080,255 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Widget _buildFeedbackSection(bool isMobile) {
+    final crossAxisCount = isMobile ? 1 : 2;
+
+    // 🔁 Ordena para mostrar os mais recentes primeiro
+    final feedbacksOrdered = List<Map<String, dynamic>>.from(_feedbacks.reversed);
+
+    // 🔢 Quantos serão exibidos (4 ou todos)
+    final visibleCount = _showAllFeedbacks
+        ? feedbacksOrdered.length
+        : min(4, feedbacksOrdered.length);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'O que dizem sobre os cafés Frathéli',
+          subtitle: 'Depoimentos de quem já sentiu o sabor da nossa montanha na xícara.',
+        ),
+        const SizedBox(height: 18),
+
+        // Lista de feedbacks aprovados
+        if (feedbacksOrdered.isNotEmpty) ...[
+          GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: visibleCount,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 18,
+              mainAxisSpacing: 18,
+              childAspectRatio: isMobile ? 3 / 1.6 : 3 / 1.1,
+            ),
+            itemBuilder: (context, index) {
+              final fb = feedbacksOrdered[index];
+              final nome = fb['nome'] ?? '';
+              final estado = fb['estado'] ?? '';
+              final mensagem = fb['mensagem'] ?? '';
+/*
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF141418),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      mensagem,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '$nome · $estado',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFD4AF37),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+*/
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F2E8), // creme claro
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE6D7B2)), // dourado suave
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x12000000),
+                      blurRadius: 14,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      mensagem,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        color: Color(0xFF2A2A2A), // texto bem legível
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '$nome · $estado',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFD4AF37), // dourado Frathéli
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+            },
+          ),
+
+          // 🔘 Botão Ver mais / Ver menos
+          if (feedbacksOrdered.length > 4)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Center(
+                child: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _showAllFeedbacks = !_showAllFeedbacks;
+                    });
+                  },
+                  child: Text(
+                    _showAllFeedbacks ? 'Ver menos depoimentos' : 'Ver mais depoimentos',
+                    style: const TextStyle(
+    color: Color(0xFFD4AF37),
+    fontWeight: FontWeight.w700,
+    ),
+
+    ),
+                ),
+              ),
+            ),
+        ]
+        else
+          const Text(
+            'Ainda não temos feedbacks publicados. Seja o primeiro a compartilhar sua experiência!',
+            style: TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+
+        const SizedBox(height: 28),
+
+        // ---------- FORMULÁRIO (igual ao anterior, mas centralizado/compacto) ----------
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Deixe seu feedback',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: isMobile ? double.infinity : 260,
+                      child: TextField(
+                        controller: _nomeFeedbackController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: isMobile ? double.infinity : 160,
+                      child: DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Estado (UF)',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: _estadoFeedback,
+                        items: _estados.map((uf) {
+                          return DropdownMenuItem(
+                            value: uf,
+                            child: Text(uf),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() => _estadoFeedback = value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                SizedBox(
+                  height: 140,
+                  child: TextField(
+                    controller: _mensagemFeedbackController,
+                    expands: true,
+                    maxLines: null,
+                    decoration: const InputDecoration(
+                      labelText: 'Seu feedback',
+                      hintText:
+                      'Conte como foi sua experiência com os cafés Frathéli...',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    height: 40,
+                    child: ElevatedButton(
+                      onPressed: _enviarFeedback,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD4AF37),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      child: const Text(
+                        'Enviar feedback',
+                        style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
 
   /*
   Future<void> _calcularFrete(BuildContext context, String cep) async {
@@ -1430,6 +1504,7 @@ class _HomePageState extends State<HomePage> {
       }
 
       // Dialog para escolher uma opção
+      /*
       final selecionada = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) {
@@ -1500,6 +1575,101 @@ class _HomePageState extends State<HomePage> {
           );
         },
       );
+      */
+
+      final selecionada = await showDialog<Map<String, dynamic>>(
+        context: context,
+        barrierColor: Colors.black.withOpacity(0.35), // fundo escurecido leve
+        builder: (context) {
+          return Dialog(
+            backgroundColor: FratheliColors.surface, // ✅ claro
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: FratheliColors.border),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Opções de frete',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: FratheliColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Divider(color: FratheliColors.border),
+
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: opcoes.length,
+                        separatorBuilder: (_, __) => Divider(color: FratheliColors.border),
+                        itemBuilder: (context, index) {
+                          final op = opcoes[index];
+                          final nome = op['transportadora'] as String? ?? 'Frete';
+                          final valor = (op['valor'] as num).toDouble();
+                          final prazo = op['prazo'] as String? ?? '';
+
+                          return ListTile(
+                            onTap: () => Navigator.of(context).pop(op),
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              nome,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: FratheliColors.text,
+                              ),
+                            ),
+                            subtitle: Text(
+                              prazo,
+                              style: TextStyle(
+                                color: FratheliColors.text2,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            trailing: Text(
+                              brl(valor),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                                color: FratheliColors.text,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          'Fechar',
+                          style: TextStyle(
+                            color: FratheliColors.gold2,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+
 
       if (selecionada != null) {
         final valor = (selecionada['valor'] as num).toDouble();
@@ -1571,18 +1741,19 @@ class _HomePageState extends State<HomePage> {
       body: Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF0B0B0C),
-                  Color(0xFF0E0F14),
-                  Color(0xFF0B0B0C),
-                ],
-              ),
-            ),
-            child: CustomScrollView(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      FratheliColors.bg,
+                      FratheliColors.bg2,
+                      FratheliColors.bg,
+                    ],
+                  ),
+                ),
+
+                child: CustomScrollView(
               controller: _scrollController,
               slivers: [
                 SliverToBoxAdapter(
@@ -1789,9 +1960,8 @@ class _HomePageState extends State<HomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF0A0A0C).withOpacity(0.95),
-        border: const Border(
-          bottom: BorderSide(color: Color(0x15FFFFFF)),
+        color: FratheliColors.surface.withOpacity(0.92),
+        border: const Border(bottom: BorderSide(color: FratheliColors.border)
         ),
       ),
       child: Center(
@@ -1803,7 +1973,7 @@ class _HomePageState extends State<HomePage> {
               Row(
                 children: [
                   Image.asset(
-                    'assets/img/logo_branco.png',
+                    'assets/img/logo_escuro.png',
                     width: 36,
                     height: 36,
                   ),
@@ -1812,20 +1982,22 @@ class _HomePageState extends State<HomePage> {
                     TextSpan(
                       text: 'FRATHÉLI ',
                       style: TextStyle(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0.04,
+                        color: FratheliColors.brown,
                       ),
                       children: [
                         TextSpan(
                           text: 'CAFÉ',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: Colors.white70,
+                            color: FratheliColors.textMuted,
                           ),
                         ),
                       ],
                     ),
                   ),
+
                 ],
               ),
               if (!isMobile)
@@ -2033,7 +2205,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
   // SEÇÃO PROCESSO
   Widget _buildProcessSection(bool isMobile) {
     final steps = [
@@ -2096,30 +2267,30 @@ class _HomePageState extends State<HomePage> {
       children: [
         Expanded(
           flex: isMobile ? 0 : 11,
-          child: Column(
+          child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SectionHeader(
+              SectionHeader(
                 title: 'Origem Frathéli Café',
                 subtitle:
                 'Cafés de montanha capixaba com integração à meliponicultura.',
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                 'O Frathéli Café nasce no Sítio Sombra da Mata, em Alfredo Chaves–ES, '
                     'região de montanha acima de 700 m de altitude, com clima ameno, brisas frescas '
                     'e solo propício para cafés doces e complexos.',
-                style: TextStyle(color: Colors.grey[400]),
+                style: TextStyle(color: FratheliColors.text2),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                   "Cultivamos de forma familiar, com práticas sustentáveis, "
                       "preservação da natureza e integração com abelhas nativas."
                       " Cada microlote é rastreável, artesanal e expressa o terroir da nossa região.",
-                style: TextStyle(color: Colors.grey[400]),
+                style: TextStyle(color: FratheliColors.text2),
               ),
-              const SizedBox(height: 12),
-              const Wrap(
+              SizedBox(height: 12),
+              Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
@@ -2146,7 +2317,7 @@ class _HomePageState extends State<HomePage> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Color(0xFF0E0F14),
-                    Color(0xFF0A0B0D),
+    FratheliColors.gold,
                   ],
                 ),
               ),
@@ -2424,9 +2595,14 @@ class _ProductCardState extends State<_ProductCard> {
 
     return Container(
       decoration: BoxDecoration(
+        /*
         color: const Color(0xFF131316),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.white10),
+*/
+        color: FratheliColors.surface,              // claro
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: FratheliColors.border),
       ),
       padding: const EdgeInsets.all(15),
       child: Column(
@@ -2495,7 +2671,7 @@ class _ProductCardState extends State<_ProductCard> {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 12,
-                color: Color(0xFF9FA3B3),
+                color: FratheliColors.text,
               ),
             ),
 
@@ -2509,7 +2685,7 @@ class _ProductCardState extends State<_ProductCard> {
                   brl(product.originalPrice!), // preço antigo
                   style: const TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF8A8D98),
+                    color: (FratheliColors.text2),
                     decoration: TextDecoration.lineThrough,
                   ),
                 ),
@@ -2526,7 +2702,7 @@ class _ProductCardState extends State<_ProductCard> {
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: FratheliColors.text,
                     ),
                   ),
                 ),
@@ -2548,6 +2724,7 @@ class _ProductCardState extends State<_ProductCard> {
           const SizedBox(height: 8),
 
           // SELETOR GRÃO / MOÍDO
+
           Row(
             children: [
               if (product.sku != "ROCA-250" && product.sku != "FLOR-250" && product.sku != "PURE-250")
@@ -2578,7 +2755,9 @@ class _ProductCardState extends State<_ProductCard> {
           ),
 
 
-          const SizedBox(height: 10),
+
+
+    const SizedBox(height: 10),
 
           // BOTÃO
     /*
@@ -2662,9 +2841,12 @@ class _ProcessCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF131316),
+       // color: const Color(0xFF131316),
+       // borderRadius: BorderRadius.circular(16),
+      //  border: Border.all(color: Colors.white12),
+        color: FratheliColors.surface,              // claro
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: FratheliColors.border),
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -2681,7 +2863,7 @@ class _ProcessCard extends StatelessWidget {
           Text(
             description,
             style: const TextStyle(
-              color: Colors.white60,
+              color: FratheliColors.text,
               fontSize: 13,
             ),
           ),

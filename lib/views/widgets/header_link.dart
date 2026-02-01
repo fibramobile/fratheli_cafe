@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/material.dart';
 
 class HeaderLink extends StatelessWidget {
@@ -19,6 +20,38 @@ class HeaderLink extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white70,
               fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+ */
+import 'package:flutter/material.dart';
+import '../../theme/fratheli_colors.dart';
+
+class HeaderLink extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const HeaderLink({super.key, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: FratheliColors.text,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),

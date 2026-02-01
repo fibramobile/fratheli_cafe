@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fratheli_cafe_web/theme/fratheli_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -21,7 +22,9 @@ class FratheliApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => CartController()),
       ],
-      child: MaterialApp(
+      child:
+          /*
+      MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Frathéli Café — Microlotes artesanais de montanha',
         theme: base.copyWith(
@@ -35,6 +38,107 @@ class FratheliApp extends StatelessWidget {
         ),
         home: const HomePage(),
       ),
+  */
+      MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Frathéli Café — Microlotes artesanais de montanha',
+      theme: base.copyWith(
+        useMaterial3: true,
+
+        // ✅ Tema claro
+        scaffoldBackgroundColor: FratheliColors.bg,
+
+        colorScheme: base.colorScheme.copyWith(
+          brightness: Brightness.light,
+          primary: FratheliColors.gold,
+          secondary: FratheliColors.gold2,
+          surface: FratheliColors.surface,
+          background: FratheliColors.bg,
+          onBackground: FratheliColors.text,
+          onSurface: FratheliColors.text,
+        ),
+
+        textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
+          headlineMedium: GoogleFonts.inter(
+            fontSize: 34,
+            fontWeight: FontWeight.w800,
+            color: FratheliColors.text,
+          ),
+          bodyMedium: GoogleFonts.inter(
+            fontSize: 16,
+            color: FratheliColors.text2,
+          ),
+        ),
+
+        // ✅ Inputs claros (TextField / Dropdown)
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: FratheliColors.surface,
+          labelStyle: const TextStyle(color: FratheliColors.text2),
+          hintStyle: const TextStyle(color: FratheliColors.text3),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: FratheliColors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: FratheliColors.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(
+              color: FratheliColors.gold.withOpacity(0.8),
+              width: 1.6,
+            ),
+          ),
+        ),
+
+        // ✅ Cards claros
+        cardTheme: CardTheme(
+          color: FratheliColors.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: FratheliColors.border),
+          ),
+        ),
+
+        // ✅ Dividers
+        dividerColor: FratheliColors.border,
+
+        // ✅ Chips claros
+        chipTheme: ChipThemeData(
+          backgroundColor: FratheliColors.surfaceAlt,
+          selectedColor: FratheliColors.gold.withOpacity(0.25),
+          labelStyle: const TextStyle(color: FratheliColors.text),
+          side: const BorderSide(color: FratheliColors.border),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        ),
+
+        // ✅ Botão principal (dourado)
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: FratheliColors.gold,
+            foregroundColor: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
+            textStyle: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+
+        // ✅ TextButton (links)
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: FratheliColors.gold2,
+            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ),
+      home: const HomePage(),
+    ),
+
     );
   }
 }
