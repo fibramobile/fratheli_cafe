@@ -124,25 +124,33 @@ class AuthService {
 
   static Future<Map<String, dynamic>> fetchMyAccount() async {
     final token = await getToken();
-    if (token == null) throw Exception('Não autenticado');
+    if (token == null) throw Exception('Usuário não autenticado');
 
+    // ✅ caminho correto
     final uri = Uri.parse('$baseUrl/account/me.php');
 
     final res = await http.get(
       uri,
       headers: {
         'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json; charset=utf-8',
       },
     );
 
-    final body = jsonDecode(res.body);
+    debugPrint('ME status: ${res.statusCode}');
+    debugPrint('ME raw body: ${res.body}');
+
+    final body = _safeJson(res.body);
 
     if (res.statusCode != 200) {
-      throw Exception(body['error'] ?? 'Erro ao buscar conta');
+      final msg = (body['error'] ?? 'Falha ao buscar conta').toString();
+      throw Exception(msg);
     }
 
-    return body;
+    return body; // { user: {...}, points: {...} }
   }
+
+
 
 
 

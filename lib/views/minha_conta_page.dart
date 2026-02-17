@@ -16,14 +16,26 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
 
   late Future<Map<String, dynamic>> _accountFuture;
 
+
   @override
   void initState() {
     super.initState();
+
     _accountFuture = AuthService.fetchMyAccount();
+
+    _accountFuture.then((data) {
+      if (!mounted) return;
+      setState(() {
+        _user = data['user']; // ✅ garante name/email certos
+      });
+    });
   }
+
 
   Future<void> _load() async {
     final u = await AuthService.getUser();
+    debugPrint('USER SALVO: $u'); // 👈 adiciona isso
+    if (!mounted) return;
     setState(() => _user = u);
   }
 
@@ -94,7 +106,7 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
 
                     if (snapshot.hasError) {
                       return Text(
-                        'Erro ao carregar pontos',
+                        'Erro ao carregar pontos: ${snapshot.error}',
                         style: const TextStyle(color: Colors.red),
                       );
                     }
@@ -119,7 +131,8 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
                       ],
                     );
                   },
-                ),
+                )
+
 
               ],
             ),
