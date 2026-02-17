@@ -8,6 +8,7 @@ import 'package:fratheli_cafe_web/views/widgets/accent_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/cart_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/cart_drawer.dart';
 import 'package:fratheli_cafe_web/views/widgets/chip_bullet.dart';
+import 'package:fratheli_cafe_web/views/widgets/header_account_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/header_link.dart';
 import 'package:fratheli_cafe_web/views/widgets/secondary_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/section_header.dart';
@@ -2027,6 +2028,8 @@ class _HomePageState extends State<HomePage> {
                       textColor: Colors.white,
                       onTap: () => _openUrl(instagramUrl),
                     ),
+                    const SizedBox(width: 10),
+                    HeaderAccountButton(), // ✅ aqui
                     const SizedBox(width: 12),
                     CartButton(
                       count: cart.totalItems,
