@@ -4,6 +4,7 @@ import 'package:fratheli_cafe_web/theme/fratheli_colors.dart';
 import 'package:fratheli_cafe_web/views/cadastro_page.dart';
 import 'package:fratheli_cafe_web/views/login_page.dart';
 import 'package:fratheli_cafe_web/views/minha_conta_page.dart';
+import 'package:fratheli_cafe_web/views/order_details_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -134,6 +135,7 @@ class FratheliApp extends StatelessWidget {
           '/login': (_) => const LoginPage(),
           '/cadastro': (_) => const CadastroPage(),
           '/minha_conta': (_) => const MinhaContaPage(),
+          '/pedido': (_) => const OrderDetailsPage(),
         },
       )
 

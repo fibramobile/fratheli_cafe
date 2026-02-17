@@ -670,6 +670,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 
 import '../../controllers/cart_controller.dart';
+import '../../services/auth_service.dart';
 import '../../theme/fratheli_colors.dart';
 import '../../utils/formatters.dart';
 // ✅ ajuste o caminho conforme seu projeto:
@@ -709,7 +710,7 @@ class CartDrawer extends StatelessWidget {
             return AlertDialog(
               backgroundColor: FratheliColors.surface,
               surfaceTintColor: Colors.transparent,
-              title: Text(
+              title: const Text(
                 'Compra externa',
                 style: TextStyle(color: FratheliColors.text),
               ),
@@ -719,7 +720,7 @@ class CartDrawer extends StatelessWidget {
                   TextField(
                     controller: titleCtrl,
                     autofocus: true,
-                    style: TextStyle(color: FratheliColors.text),
+                    style: const TextStyle(color: FratheliColors.text),
                     decoration: InputDecoration(
                       labelText: 'Título *',
                       hintText: 'Ex: Retirada na loja / Compra via Instagram',
@@ -731,7 +732,7 @@ class CartDrawer extends StatelessWidget {
                     controller: descCtrl,
                     minLines: 2,
                     maxLines: 4,
-                    style: TextStyle(color: FratheliColors.text),
+                    style: const TextStyle(color: FratheliColors.text),
                     decoration: const InputDecoration(
                       labelText: 'Descrição (opcional)',
                       hintText: 'Detalhes…',
@@ -745,7 +746,7 @@ class CartDrawer extends StatelessWidget {
                     Navigator.pop(ctx);
                     cart.setCalculatedMode();
                   },
-                  child: Text(
+                  child: const Text(
                     'Cancelar',
                     style: TextStyle(color: FratheliColors.text2),
                   ),
@@ -785,11 +786,11 @@ class CartDrawer extends StatelessWidget {
       fillColor: FratheliColors.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: FratheliColors.border),
+        borderSide: const BorderSide(color: FratheliColors.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: FratheliColors.border),
+        borderSide: const BorderSide(color: FratheliColors.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -835,7 +836,7 @@ class CartDrawer extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 "Seu carrinho",
                 style: TextStyle(
                   fontSize: 20,
@@ -845,11 +846,11 @@ class CartDrawer extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onClose,
-                icon: Icon(Icons.close, color: FratheliColors.text),
+                icon: const Icon(Icons.close, color: FratheliColors.text),
               ),
             ],
           ),
-          Divider(color: FratheliColors.border, height: 18),
+          const Divider(color: FratheliColors.border, height: 18),
 
           // ✅ SCROLL DO CARRINHO INTEIRO
           Expanded(
@@ -903,7 +904,7 @@ class CartDrawer extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: Icon(Icons.remove, color: FratheliColors.text),
+                                    icon: const Icon(Icons.remove, color: FratheliColors.text),
                                     onPressed: () => cart.changeQty(
                                       item.product.sku,
                                       item.grind,
@@ -918,7 +919,7 @@ class CartDrawer extends StatelessWidget {
                                     ),
                                   ),
                                   IconButton(
-                                    icon: Icon(Icons.add, color: FratheliColors.text),
+                                    icon: const Icon(Icons.add, color: FratheliColors.text),
                                     onPressed: () => cart.changeQty(
                                       item.product.sku,
                                       item.grind,
@@ -940,7 +941,7 @@ class CartDrawer extends StatelessWidget {
                     height: 46,
                     child: OutlinedButton.icon(
                       onPressed: onClose,
-                      icon: Icon(Icons.arrow_back, color: FratheliColors.gold2),
+                      icon: const Icon(Icons.arrow_back, color: FratheliColors.gold2),
                       label: const Text(
                         "Continuar comprando",
                         style: TextStyle(
@@ -950,7 +951,7 @@ class CartDrawer extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         backgroundColor: FratheliColors.surface,
-                        side: BorderSide(color: FratheliColors.border),
+                        side: const BorderSide(color: FratheliColors.border),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(999),
                         ),
@@ -1039,7 +1040,7 @@ class CartDrawer extends StatelessWidget {
                         fillColor: FratheliColors.surface,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: FratheliColors.border),
+                          borderSide: const BorderSide(color: FratheliColors.border),
                         ),
                       ),
                     ),
@@ -1084,7 +1085,7 @@ class CartDrawer extends StatelessWidget {
                             const Text("Subtotal",
                                 style: TextStyle(color: FratheliColors.text2, fontWeight: FontWeight.w700)),
                             Text(brl(cart.subtotal),
-                                style: TextStyle(color: FratheliColors.text, fontWeight: FontWeight.w900)),
+                                style: const TextStyle(color: FratheliColors.text, fontWeight: FontWeight.w900)),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -1097,12 +1098,12 @@ class CartDrawer extends StatelessWidget {
                               cart.freightMode == FreightMode.combine
                                   ? "a combinar"
                                   : (cart.freightValue != null ? brl(cart.freightValue!) : "a calcular"),
-                              style: TextStyle(color: FratheliColors.text, fontWeight: FontWeight.w900),
+                              style: const TextStyle(color: FratheliColors.text, fontWeight: FontWeight.w900),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
-                        Divider(color: FratheliColors.border),
+                        const Divider(color: FratheliColors.border),
                         const SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1110,7 +1111,7 @@ class CartDrawer extends StatelessWidget {
                             const Text("Total",
                                 style: TextStyle(color: FratheliColors.text, fontWeight: FontWeight.w900)),
                             Text(brl(cart.totalWithFreight),
-                                style: TextStyle(color: FratheliColors.text, fontWeight: FontWeight.w900)),
+                                style: const TextStyle(color: FratheliColors.text, fontWeight: FontWeight.w900)),
                           ],
                         ),
                       ],
@@ -1212,6 +1213,41 @@ class CartDrawer extends StatelessWidget {
                             final cpfController = TextEditingController();
                             final addressController = TextEditingController();
 
+                            bool didPrefill = false;
+
+                            Future<void> prefillFromProfile() async {
+                              try {
+                                final data = await AuthService.fetchClientProfile(); // GET /api/account/...
+                                // esperado: { cpf, phone, address_json }
+                                if (data == null) return;
+
+                                final cpf = (data['cpf'] ?? '').toString();
+                                final phone = (data['phone'] ?? '').toString();
+                                cpfController.text = cpf;
+                                phoneController.text = phone;
+
+                                final addr = data['address'];
+                                if (addr is Map) {
+                                  final street = (addr['street'] ?? '').toString();
+                                  final cep = (addr['cep'] ?? '').toString();
+                                  addressController.text = cep.isNotEmpty ? "$street\nCEP $cep" : street;
+                                } else if (data['address_json'] != null) {
+                                  // se vier como string JSON
+                                  try {
+                                    final m = jsonDecode(data['address_json'].toString());
+                                    if (m is Map) {
+                                      final street = (m['street'] ?? '').toString();
+                                      final cep = (m['cep'] ?? '').toString();
+                                      addressController.text = cep.isNotEmpty ? "$street\nCEP $cep" : street;
+                                    }
+                                  } catch (_) {}
+                                }
+                              } catch (_) {
+                                // se falhar, segue sem preencher
+                              }
+                            }
+
+
                             bool isLogging = false;
                             bool isLogged = false;
 
@@ -1229,6 +1265,13 @@ class CartDrawer extends StatelessWidget {
 
                             return StatefulBuilder(
                               builder: (ctx, setState) {
+                                if (!didPrefill) {
+                                  didPrefill = true;
+                                  Future.microtask(() async {
+                                    await prefillFromProfile();
+                                    if (ctx.mounted) setState(() {});
+                                  });
+                                }
                                 Future<void> handleLogin() async {
                                   try {
                                     setState(() => isLogging = true);
@@ -1354,18 +1397,39 @@ class CartDrawer extends StatelessWidget {
                                       child: const Text('Cancelar'),
                                     ),
                                     ElevatedButton(
-                                      onPressed: () {
-                                        if (formKey.currentState?.validate() ?? false) {
-                                          Navigator.of(ctx).pop({
-                                            'nome': nameController.text.trim(),
-                                            'telefone': phoneController.text.trim(),
-                                            'cpf': cpfController.text.trim(),
-                                            'endereco': addressController.text.trim(),
-                                          });
+                                      onPressed: () async {
+                                        if (!(formKey.currentState?.validate() ?? false)) return;
+
+                                        // ✅ salva/atualiza perfil no SQL
+                                        try {
+                                          await AuthService.upsertClientProfile(
+                                            cpf: cpfController.text.trim(),
+                                            phone: phoneController.text.trim(),
+                                            address: {
+                                              'street': addressController.text.trim(),
+                                              // se quiser guardar o cep do carrinho também:
+                                              'cep': cepController.text.trim(),
+                                            },
+                                          );
+                                        } catch (e) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Não consegui salvar seu cadastro: $e')),
+                                            );
+                                          }
+                                          // mesmo com erro, pode deixar continuar:
                                         }
+
+                                        Navigator.of(ctx).pop({
+                                          'nome': nameController.text.trim(),
+                                          'telefone': phoneController.text.trim(),
+                                          'cpf': cpfController.text.trim(),
+                                          'endereco': addressController.text.trim(),
+                                        });
                                       },
                                       child: const Text('Continuar'),
                                     ),
+
                                   ],
                                 );
                               },
@@ -1393,7 +1457,7 @@ class CartDrawer extends StatelessWidget {
 
                   TextButton(
                     onPressed: onClear,
-                    child: Text(
+                    child: const Text(
                       "Limpar carrinho",
                       style: TextStyle(
                         color: FratheliColors.gold2,

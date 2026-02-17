@@ -152,6 +152,52 @@ class AuthService {
 
 
 
+  static Future<Map<String, dynamic>?> fetchClientProfile() async {
+    final token = await getToken();
+    if (token == null) return null;
+
+    final uri = Uri.parse('$baseUrl/account/profile_get.php');
+    final res = await http.get(uri, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json; charset=utf-8',
+    });
+
+    final body = _safeJson(res.body);
+    if (res.statusCode != 200) return null;
+
+    return body['profile'];
+  }
+
+
+  static Future<void> upsertClientProfile({
+    required String cpf,
+    required String phone,
+    required Map<String, dynamic> address,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Usuário não autenticado');
+
+    final uri = Uri.parse('$baseUrl/account/profile_upsert.php');
+    final res = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: jsonEncode({
+        'cpf': cpf,
+        'phone': phone,
+        'address': address,
+      }),
+    );
+
+    final body = _safeJson(res.body);
+    if (res.statusCode != 200) {
+      throw Exception((body['error'] ?? 'Falha ao salvar perfil').toString());
+    }
+  }
+
+
 
 
 }
