@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
+import '../services/order_service.dart';
 import '../theme/fratheli_colors.dart';
 
 class MinhaContaPage extends StatefulWidget {
@@ -168,6 +169,20 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
                     ],
                   ),
                 ),
+
+            const SizedBox(height: 16),
+
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/meus_pedidos');
+                },
+                icon: const Icon(Icons.receipt_long),
+                label: const Text('Meus pedidos'),
+              ),
+            ),
 
                 const SizedBox(height: 14),
 

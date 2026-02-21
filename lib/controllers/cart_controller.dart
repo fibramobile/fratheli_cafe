@@ -20,6 +20,7 @@ enum FreightMode { calculated, free, combine, external }
 class CartController extends ChangeNotifier {
   final List<CartItem> _items = [];
   String? _cep;
+  String? lastOrderId;
 
   List<CartItem> get items => List.unmodifiable(_items);
 

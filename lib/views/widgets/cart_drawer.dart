@@ -673,6 +673,8 @@ import '../../controllers/cart_controller.dart';
 import '../../services/auth_service.dart';
 import '../../theme/fratheli_colors.dart';
 import '../../utils/formatters.dart';
+import '../../services/order_service.dart';
+
 // ✅ ajuste o caminho conforme seu projeto:
 
 class CartDrawer extends StatelessWidget {
@@ -1121,6 +1123,7 @@ class CartDrawer extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // ✅ FINALIZAR
+    /*
                   SizedBox(
                     height: 48,
                     child: ElevatedButton(
@@ -1452,8 +1455,201 @@ class CartDrawer extends StatelessWidget {
                     ),
 
                   ),
+                  */
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final cart = context.read<CartController>();
 
-                  const SizedBox(height: 6),
+                        // 1️⃣ Carrinho vazio
+                        if (cart.items.isEmpty) {
+                          showDialog(
+                            context: context,
+                            builder: (_) => const AlertDialog(
+                              title: Text('Carrinho vazio'),
+                              content: Text(
+                                'Adicione pelo menos um produto antes de finalizar o pedido.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        // 2️⃣ Validação de frete calculado
+                        if (cart.freightMode == FreightMode.calculated) {
+                          final cep = cepController.text.trim();
+                          final rawCep = cep.replaceAll(RegExp(r'\D'), '');
+
+                          if (rawCep.length != 8) {
+                            showDialog(
+                              context: context,
+                              builder: (_) => const AlertDialog(
+                                title: Text('CEP obrigatório'),
+                                content: Text('Informe um CEP válido para calcular o frete.'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (cart.freightValue == null) {
+                            showDialog(
+                              context: context,
+                              builder: (_) => const AlertDialog(
+                                title: Text('Frete não calculado'),
+                                content: Text('Calcule o frete antes de finalizar o pedido.'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          onCepSaved(cep);
+                        }
+
+                        // 3️⃣ Dialog para dados do cliente
+                        final result = await showDialog<Map<String, String>>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) {
+                            final formKey = GlobalKey<FormState>();
+                            final nameController = TextEditingController();
+                            final phoneController = TextEditingController();
+                            final cpfController = TextEditingController();
+                            final addressController = TextEditingController();
+
+                            return AlertDialog(
+                              title: const Text('Dados para envio'),
+                              content: Form(
+                                key: formKey,
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    children: [
+                                      TextFormField(
+                                        controller: nameController,
+                                        decoration: const InputDecoration(labelText: 'Nome completo'),
+                                        validator: (v) =>
+                                        v == null || v.length < 3 ? 'Informe o nome completo' : null,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: phoneController,
+                                        decoration:
+                                        const InputDecoration(labelText: 'Telefone (WhatsApp)'),
+                                        validator: (v) =>
+                                        v == null || v.length < 10 ? 'Telefone inválido' : null,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: cpfController,
+                                        decoration: const InputDecoration(labelText: 'CPF'),
+                                        validator: (v) =>
+                                        v == null || v.length < 11 ? 'CPF inválido' : null,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: addressController,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Endereço completo',
+                                        ),
+                                        maxLines: 3,
+                                        validator: (v) =>
+                                        v == null || v.length < 10 ? 'Endereço inválido' : null,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Cancelar'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (!(formKey.currentState?.validate() ?? false)) return;
+
+                                    Navigator.pop(ctx, {
+                                      'nome': nameController.text.trim(),
+                                      'telefone': phoneController.text.trim(),
+                                      'cpf': cpfController.text.trim(),
+                                      'endereco': addressController.text.trim(),
+                                    });
+                                  },
+                                  child: const Text('Continuar'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (result == null) return;
+
+                        cart.setCustomerData(
+                          name: result['nome'] ?? '',
+                          phone: result['telefone'] ?? '',
+                          cpf: result['cpf'] ?? '',
+                          address: result['endereco'] ?? '',
+                        );
+
+                        // 4️⃣ Montar payload do pedido
+                        final items = cart.items.map((i) {
+                          final unit = double.tryParse(i.product.price.toString()) ?? 0.0;
+                          final qty = i.quantity;
+
+                          return {
+                            "sku": i.product.sku,
+                            "qty": qty,
+                            "name": i.product.name,
+                            "grind": i.grind,
+                            "unitPrice": unit,
+                            "lineTotal": unit * qty,
+                          };
+                        }).toList();
+
+                        final payload = {
+                          "items": items,
+                          "subtotal": cart.subtotal,
+                          "shipping": cart.freightMode == FreightMode.combine
+                              ? 0
+                              : (cart.freightValue ?? 0),
+                          "shippingService": cart.freightService ?? "",
+                          "shippingDeadline": cart.freightDeadline ?? "",
+                          "total": cart.totalWithFreight,
+                          "paymentProvider": "PIX_MANUAL",
+                          "paymentStatus": "AGUARDANDO_PAGAMENTO",
+                          "shippingStatus": "AGUARDANDO_PAGAMENTO",
+                          "customer": {
+                            "name": cart.customerName,
+                            "phone": cart.customerPhone,
+                            "cpf": cart.customerCpf,
+                            "address": cart.customerAddress,
+                          }
+                        };
+
+                        // 5️⃣ Salvar pedido no backend
+                        try {
+                          final created = await OrderService.createOrder(payload);
+                          //final orderId = (created['id'] ?? '').toString();
+                          final orderId = (created['order']?['id'] ?? '').toString(); // ✅ certo
+                          cart.lastOrderId = orderId;
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erro ao salvar pedido: $e')),
+                            );
+                          }
+                          return;
+                        }
+
+                        // 6️⃣ Seguir para o PIX
+                        onCheckout();
+                      },
+                      child: const Text("Finalizar pedido"),
+                    ),
+                  ),
+
+
+    const SizedBox(height: 6),
 
                   TextButton(
                     onPressed: onClear,

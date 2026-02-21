@@ -13,11 +13,13 @@ import 'package:fratheli_cafe_web/views/widgets/header_link.dart';
 import 'package:fratheli_cafe_web/views/widgets/secondary_button.dart';
 import 'package:fratheli_cafe_web/views/widgets/section_header.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:http/http.dart' as http;
 import '../controllers/cart_controller.dart';
 import '../models/product.dart';
+import '../services/auth_service.dart';
 import '../theme/fratheli_colors.dart';
 import '../utils/formatters.dart';
 import '../views/widgets/section_wrapper.dart';
@@ -66,6 +68,9 @@ class _HomePageState extends State<HomePage> {
   final _processoKey = GlobalKey();
   final _origemKey = GlobalKey();
   final _contatoKey = GlobalKey();
+
+  ///----------
+  bool _isCheckingOut = false; // ✅ ADICIONE AQUI
 
   ///---------------------------------------------------
   /// 👇 Feedbacks
@@ -732,7 +737,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
   */
-
+/*
   Future<String?> _enviarPedidoParaApi(CartController cart) async {
     try {
       final items = cart.items.map((item) => {
@@ -815,7 +820,84 @@ class _HomePageState extends State<HomePage> {
       return null;
     }
   }
+  */
 
+  Future<String?> _enviarPedidoParaApi(CartController cart) async {
+    try {
+      final token = await AuthService.getToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('Usuário não autenticado');
+      }
+
+      final items = cart.items
+          .map((item) => {
+        "sku": item.product.sku,
+        "qty": item.quantity,
+        "name": item.product.name,
+        "grind": item.grind,
+        "unitPrice": item.product.price,
+        "lineTotal": item.product.price * item.quantity,
+      })
+          .toList();
+
+      final payload = {
+        "items": items,
+        "subtotal": cart.subtotal,
+        "shipping": cart.effectiveFreight,
+        "total": cart.totalWithFreight,
+        "freightMode": cart.freightMode.name,
+        "shippingService": cart.freightService,
+        "shippingDeadline": cart.freightDeadline,
+        "paymentProvider": "PIX_MANUAL",
+        "paymentStatus": "AGUARDANDO_PAGAMENTO",
+        "shippingStatus": "AGUARDANDO_PAGAMENTO",
+        "customer": {
+          "name": cart.customerName,
+          "phone": cart.customerPhone,
+          "cpf": cart.customerCpf,
+          "address": cart.customerAddress,
+        },
+        "cep": cart.cep,
+      };
+
+      // ✅ endpoint que faz INSERT no DB
+      final uri = Uri.parse("https://frathelicafe.com.br/api/orders/create.php");
+
+      debugPrint("🧾 [createOrder] POST => $uri");
+      debugPrint("🧾 [createOrder] token? ${token.isNotEmpty} (len=${token.length})");
+      debugPrint("🧾 [createOrder] payload => ${jsonEncode(payload)}");
+
+      final res = await http.post(
+        uri,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(payload),
+      );
+
+      debugPrint("🧾 [createOrder] status=${res.statusCode}");
+      debugPrint("🧾 [createOrder] rawBody=${res.body}");
+
+      final data = AuthService.safeJson(res.body);
+      debugPrint("🧾 [createOrder] parsedBody=$data");
+
+      // ✅ RETORNA O ORDER_CODE (ord_...) — o que sua tela de pagamento geralmente espera
+      if (res.statusCode == 200 && data["ok"] == true) {
+        final orderCode = data["order"]?["id"]?.toString();
+        if (orderCode != null && orderCode.isNotEmpty) return orderCode;
+
+        throw Exception("Resposta inválida: order.id não veio");
+      }
+
+      // erro retornado pela API
+      final msg = (data["error"] ?? "Falha ao criar pedido").toString();
+      throw Exception(msg);
+    } catch (e) {
+      debugPrint("Erro ao enviar pedido: $e");
+      return null;
+    }
+  }
   @override
   void dispose() {
     _scrollController.dispose();
@@ -1831,26 +1913,9 @@ class _HomePageState extends State<HomePage> {
                 */
               },
 /*
-              onCheckout: () async {
-                if (cart.items.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Seu carrinho está vazio.'),
-                    ),
-                  );
-                  return;
-                }
 
-                // 1) Envia o pedido para a API PHP (salva clients.json e orders.json)
-                await _enviarPedidoParaApi(cart);
+             onCheckout: () async {
 
-                // 2) Mantém o fluxo atual pelo WhatsApp (por enquanto)
-                final msg = cart.buildWhatsMessage();
-                _openUrl(_buildWhatsUrl(msg));
-              },
-*/
-
-              onCheckout: () async {
                 // sempre pega o cart atualizado do Provider
                 final cart = context.read<CartController>();
 
@@ -1885,45 +1950,50 @@ class _HomePageState extends State<HomePage> {
                 await _openUrlExternal(url);
 
               },
-/*
-              onCheckout: () async {
-                if (cart.items.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Seu carrinho está vazio.'),
-                    ),
-                  );
-                  return;
-                }
-
-                // 1) Registra pedido na API e pega orderId
-                final orderId = await _enviarPedidoParaApi(cart);
-
-                if (orderId == null) {
-                  // se deu erro, não segue
-                  return;
-                }
-
-                // 2) Abre a página de pagamento desse pedido
-                //final url = "https://frathelicafe.com.br/pagamento.html?orderId=$orderId";
-                final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderId";
-                _openUrl(url);
-              },
 */
-/*
-              onCheckout: () {
-                if (cart.items.isEmpty) {
+
+              onCheckout: () async {
+                // ✅ trava clique duplo / chamada duplicada
+                if (_isCheckingOut) return;
+                _isCheckingOut = true;
+
+                try {
+                  // sempre pega o cart atualizado do Provider
+                  final cart = context.read<CartController>();
+
+                  if (cart.items.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Seu carrinho está vazio.')),
+                    );
+                    return;
+                  }
+
+                  // 1) Registra pedido na API e pega ORDER_CODE (ex: ord_...)
+                  final orderCode = await _enviarPedidoParaApi(cart);
+
+                  debugPrint('>>> onCheckout: orderCode recebido da API = $orderCode');
+
+                  if (orderCode == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Não foi possível criar o pedido.')),
+                    );
+                    return;
+                  }
+
+                  // 2) Abre a página de pagamento desse pedido (usando order_code)
+                  final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderCode";
+                  debugPrint('>>> Abrindo URL de pagamento: $url');
+                  await _openUrlExternal(url);
+                } catch (e) {
+                  debugPrint('>>> onCheckout erro: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Seu carrinho está vazio.'),
-                    ),
+                    const SnackBar(content: Text('Ocorreu um erro ao finalizar o pedido.')),
                   );
-                  return;
+                } finally {
+                  _isCheckingOut = false;
                 }
-                final msg = cart.buildWhatsMessage();
-                _openUrl(_buildWhatsUrl(msg));
               },
-              */
+
               onClear: () => context.read<CartController>().clear(),
               onCalculateFreight: (cep) => _calcularFrete(context, cep), // 👈
             ),
@@ -1932,6 +2002,13 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Future<void> onCheckout(String orderId) async {
+    final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderId";
+    debugPrint('>>> Abrindo URL de pagamento: $url');
+    await _openUrlExternal(url);
+  }
+
 
   Future<void> _openUrlExternal(String url) async {
     final uri = Uri.parse(url.trim());

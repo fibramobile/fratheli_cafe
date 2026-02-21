@@ -24,7 +24,7 @@ class AuthService {
       }),
     );
 
-    final body = _safeJson(res.body);
+    final body = safeJson(res.body);
 
     if (res.statusCode != 200) {
       final msg = (body['error'] ?? 'Falha no login').toString();
@@ -64,10 +64,10 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString('auth_user');
     if (raw == null) return null;
-    return _safeJson(raw);
+    return safeJson(raw);
   }
 
-  static Map<String, dynamic> _safeJson(String raw) {
+  static Map<String, dynamic> safeJson(String raw) {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) return decoded;
@@ -100,7 +100,7 @@ class AuthService {
     debugPrint('REGISTER status: ${res.statusCode}');
     debugPrint('REGISTER raw body: ${res.body}');
 
-    final body = _safeJson(res.body);
+    final body = safeJson(res.body);
 
     if (res.statusCode != 200) {
       final msg = (body['error'] ?? 'Falha no cadastro').toString();
@@ -140,7 +140,7 @@ class AuthService {
     debugPrint('ME status: ${res.statusCode}');
     debugPrint('ME raw body: ${res.body}');
 
-    final body = _safeJson(res.body);
+    final body = safeJson(res.body);
 
     if (res.statusCode != 200) {
       final msg = (body['error'] ?? 'Falha ao buscar conta').toString();
@@ -162,7 +162,7 @@ class AuthService {
       'Content-Type': 'application/json; charset=utf-8',
     });
 
-    final body = _safeJson(res.body);
+    final body = safeJson(res.body);
     if (res.statusCode != 200) return null;
 
     return body['profile'];
@@ -191,7 +191,7 @@ class AuthService {
       }),
     );
 
-    final body = _safeJson(res.body);
+    final body = safeJson(res.body);
     if (res.statusCode != 200) {
       throw Exception((body['error'] ?? 'Falha ao salvar perfil').toString());
     }
