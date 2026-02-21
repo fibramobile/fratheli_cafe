@@ -1625,13 +1625,27 @@ class CartDrawer extends StatelessWidget {
                             "address": cart.customerAddress,
                           }
                         };
-
+/*
                         // 5️⃣ Salvar pedido no backend
                         try {
                           final created = await OrderService.createOrder(payload);
                           //final orderId = (created['id'] ?? '').toString();
                           final orderId = (created['order']?['id'] ?? '').toString(); // ✅ certo
                           cart.lastOrderId = orderId;
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erro ao salvar pedido: $e')),
+                            );
+                          }
+                          return;
+                        }
+                        */
+
+                        // 5️⃣ Salvar pedido no backend
+                        try {
+                          final orderCode = await OrderService.createOrder(payload); // ✅ agora retorna String
+                          cart.lastOrderId = orderCode;
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

@@ -14,7 +14,7 @@ class OrderService {
       return {};
     }
   }
-
+/*
   static Future<Map<String, dynamic>> createOrder(Map<String, dynamic> payload) async {
     final token = await AuthService.getToken();
     if (token == null) throw Exception('Usuário não autenticado');
@@ -58,7 +58,47 @@ class OrderService {
 
     return body;
   }
-  
+*/
+  static Future<String> createOrder(Map<String, dynamic> payload) async {
+    final token = await AuthService.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Usuário não autenticado');
+    }
+
+    final uri = Uri.parse('$baseUrl/orders/create.php');
+
+    debugPrint('🧾 [OrderService.createOrder] POST => $uri');
+    debugPrint('🧾 [OrderService.createOrder] token? ${token.isNotEmpty} (len=${token.length})');
+    debugPrint('🧾 [OrderService.createOrder] payload => ${jsonEncode(payload)}');
+
+    final res = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode(payload),
+    ).timeout(const Duration(seconds: 20));
+
+    debugPrint('🧾 [OrderService.createOrder] status=${res.statusCode}');
+    debugPrint('🧾 [OrderService.createOrder] rawBody=${res.body}');
+
+    final body = safeJson(res.body);
+
+    if (res.statusCode != 200) {
+      throw Exception((body['error'] ?? 'Erro ao criar pedido').toString());
+    }
+
+    // Esperado: {"ok":true,"order":{"db_id":11,"id":"ord_..."}}
+    if (body['ok'] == true) {
+      final code = body['order']?['id']?.toString();
+      if (code != null && code.isNotEmpty) return code;
+    }
+
+    throw Exception('Resposta inválida do servidor (order.id não veio).');
+  }
+
   static Future<Map<String, dynamic>> fetchOrder(String orderId) async {
     final token = await AuthService.getToken();
     if (token == null) throw Exception('Usuário não autenticado');

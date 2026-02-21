@@ -20,6 +20,7 @@ import 'package:http/http.dart' as http;
 import '../controllers/cart_controller.dart';
 import '../models/product.dart';
 import '../services/auth_service.dart';
+import '../services/order_service.dart';
 import '../theme/fratheli_colors.dart';
 import '../utils/formatters.dart';
 import '../views/widgets/section_wrapper.dart';
@@ -898,6 +899,7 @@ class _HomePageState extends State<HomePage> {
       return null;
     }
   }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -1951,7 +1953,7 @@ class _HomePageState extends State<HomePage> {
 
               },
 */
-
+/*
               onCheckout: () async {
                 // ✅ trava clique duplo / chamada duplicada
                 if (_isCheckingOut) return;
@@ -1993,6 +1995,72 @@ class _HomePageState extends State<HomePage> {
                   _isCheckingOut = false;
                 }
               },
+*/
+              onCheckout: () async {
+                if (_isCheckingOut) return;
+                setState(() => _isCheckingOut = true);
+
+                try {
+                  final cart = context.read<CartController>();
+
+                  if (cart.items.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Seu carrinho está vazio.')),
+                    );
+                    return;
+                  }
+
+                  final items = cart.items.map((item) => {
+                    "sku": item.product.sku,
+                    "qty": item.quantity,
+                    "name": item.product.name,
+                    "grind": item.grind,
+                    "unitPrice": item.product.price,
+                    "lineTotal": item.product.price * item.quantity,
+                  }).toList();
+
+                  final payload = {
+                    "items": items,
+                    "subtotal": cart.subtotal,
+                    "shipping": cart.effectiveFreight,
+                    "total": cart.totalWithFreight,
+
+                    "freightMode": cart.freightMode.name,
+                    "shippingService": cart.freightService,
+                    "shippingDeadline": cart.freightDeadline,
+
+                    "paymentProvider": "PIX_MANUAL",
+                    "paymentStatus": "AGUARDANDO_PAGAMENTO",
+                    "shippingStatus": "AGUARDANDO_PAGAMENTO",
+
+                    "customer": {
+                      "name": cart.customerName,
+                      "phone": cart.customerPhone,
+                      "cpf": cart.customerCpf,
+                      "address": cart.customerAddress,
+                    },
+
+                    "cep": cart.cep,
+                  };
+
+                  // ✅ ÚNICA chamada que cria pedido
+                  final orderCode = await OrderService.createOrder(payload);
+
+                  debugPrint('>>> onCheckout: orderCode recebido = $orderCode');
+
+                  final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderCode";
+                  debugPrint('>>> Abrindo URL de pagamento: $url');
+                  await _openUrlExternal(url);
+
+                } catch (e) {
+                  debugPrint('>>> onCheckout erro: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erro ao finalizar: $e')),
+                  );
+                } finally {
+                  if (mounted) setState(() => _isCheckingOut = false);
+                }
+              },
 
               onClear: () => context.read<CartController>().clear(),
               onCalculateFreight: (cep) => _calcularFrete(context, cep), // 👈
@@ -2002,13 +2070,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  Future<void> onCheckout(String orderId) async {
-    final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderId";
-    debugPrint('>>> Abrindo URL de pagamento: $url');
-    await _openUrlExternal(url);
-  }
-
 
   Future<void> _openUrlExternal(String url) async {
     final uri = Uri.parse(url.trim());

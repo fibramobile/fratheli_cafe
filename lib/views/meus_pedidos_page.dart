@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/order_service.dart';
 import '../theme/fratheli_colors.dart';
@@ -18,7 +19,7 @@ class _MeusPedidosPageState extends State<MeusPedidosPage> {
     _future = OrderService.fetchMyOrders();
   }
 
-  // helpers fora do build (mais limpo)
+  // helpers
   String brl(num v) => 'R\$ ${v.toStringAsFixed(2).replaceAll('.', ',')}';
 
   String formatDt(String raw) {
@@ -100,6 +101,15 @@ class _MeusPedidosPageState extends State<MeusPedidosPage> {
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+
+    // ✅ largura máxima do “miolo” na web (igual sua 1ª tela)
+    final bool isWide = kIsWeb && w >= 900;
+    final double maxWidth = 1040;
+
+    // ✅ padding lateral responsivo
+    final double sidePad = isWide ? 24 : 16;
+
     return Scaffold(
       backgroundColor: FratheliColors.bg,
       appBar: AppBar(
@@ -116,11 +126,7 @@ class _MeusPedidosPageState extends State<MeusPedidosPage> {
         ),
         title: Row(
           children: [
-            Image.asset(
-              'assets/img/logo_escuro.png',
-              width: 30,
-              height: 30,
-            ),
+            Image.asset('assets/img/logo_escuro.png', width: 30, height: 30),
             const SizedBox(width: 10),
             RichText(
               text: const TextSpan(
@@ -145,185 +151,181 @@ class _MeusPedidosPageState extends State<MeusPedidosPage> {
         ),
       ),
 
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _future,
-        builder: (context, s) {
-          // loading
-          if (s.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      // ✅ CENTER + ConstrainedBox centraliza no web
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isWide ? maxWidth : double.infinity,
+          ),
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _future,
+            builder: (context, s) {
+              if (s.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          // erro
-          if (s.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Não foi possível carregar seus pedidos.\n${s.error}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: FratheliColors.textMuted),
-                ),
-              ),
-            );
-          }
-
-          final orders = s.data ?? [];
-
-          // vazio
-          if (orders.isEmpty) {
-            return const Center(
-              child: Text(
-                'Você ainda não tem pedidos.',
-                style: TextStyle(color: FratheliColors.textMuted),
-              ),
-            );
-          }
-
-          // ✅ AQUI é onde entra o título + lista
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  'Meus pedidos',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: FratheliColors.text,
+              if (s.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Não foi possível carregar seus pedidos.\n${s.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: FratheliColors.textMuted),
+                    ),
                   ),
-                ),
-              ),
+                );
+              }
 
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                  itemCount: orders.length,
-                  itemBuilder: (context, i) {
-                    final o = orders[i];
+              final orders = s.data ?? [];
 
-                    final code = (o['order_code'] ?? '').toString();
-                    final payRaw = (o['payment_status'] ?? '').toString();
-                    final createdRaw = (o['created_at'] ?? '').toString();
-                    final totalNum = parseNum(o['total']);
-                    final st = statusStyle(payRaw);
+              if (orders.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'Você ainda não tem pedidos.',
+                    style: TextStyle(color: FratheliColors.textMuted),
+                  ),
+                );
+              }
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Material(
-                        color: FratheliColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/pedido',
-                              arguments: code,
-                            );
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: FratheliColors.border),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x0F000000),
-                                  blurRadius: 18,
-                                  offset: Offset(0, 10),
-                                )
-                              ],
-                            ),
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Pedido $code',
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w900,
-                                          color: FratheliColors.text,
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: FratheliColors.brown,
-                                        borderRadius: BorderRadius.circular(999),
-                                      ),
-                                      child: Text(
-                                        brl(totalNum),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 12.5,
-                                          letterSpacing: 0.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 10),
-
-                                Row(
-                                  children: [
-                                    pill(st.label, st.icon, st.bg, st.fg),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        formatDt(createdRaw),
-                                        style: const TextStyle(
-                                          color: FratheliColors.textMuted,
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.chevron_right,
-                                      color: FratheliColors.text.withOpacity(0.35),
-                                    ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                const Row(
-                                  children: [
-                                    _Dot(),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Frathéli Café',
-                                      style: TextStyle(
-                                        color: FratheliColors.text2,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+              // ✅ usa ListView com padding lateral (sidePad) e topo bonito
+              return ListView.builder(
+                padding: EdgeInsets.fromLTRB(sidePad, 16, sidePad, 28),
+                itemCount: orders.length + 1, // +1 pro título
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        'Meus pedidos',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: FratheliColors.text,
                         ),
                       ),
                     );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
+                  }
+
+                  final o = orders[index - 1];
+
+                  final code = (o['order_code'] ?? '').toString();
+                  final payRaw = (o['payment_status'] ?? '').toString();
+                  final createdRaw = (o['created_at'] ?? '').toString();
+                  final totalNum = parseNum(o['total']);
+                  final st = statusStyle(payRaw);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Material(
+                      color: FratheliColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/pedido',
+                            arguments: code,
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: FratheliColors.border),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0F000000),
+                                blurRadius: 18,
+                                offset: Offset(0, 10),
+                              )
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Pedido $code',
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w900,
+                                        color: FratheliColors.text,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: FratheliColors.brown,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      brl(totalNum),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 12.5,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  pill(st.label, st.icon, st.bg, st.fg),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      formatDt(createdRaw),
+                                      style: const TextStyle(
+                                        color: FratheliColors.textMuted,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    color: FratheliColors.text.withOpacity(0.35),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              const Row(
+                                children: [
+                                  _Dot(),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Frathéli Café',
+                                    style: TextStyle(
+                                      color: FratheliColors.text2,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
