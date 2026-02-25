@@ -1996,6 +1996,7 @@ class _HomePageState extends State<HomePage> {
                 }
               },
 */
+    /*
               onCheckout: () async {
                 if (_isCheckingOut) return;
                 setState(() => _isCheckingOut = true);
@@ -2056,6 +2057,39 @@ class _HomePageState extends State<HomePage> {
                   debugPrint('>>> onCheckout erro: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Erro ao finalizar: $e')),
+                  );
+                } finally {
+                  if (mounted) setState(() => _isCheckingOut = false);
+                }
+              },
+
+              */
+              onCheckout: () async {
+                if (_isCheckingOut) return;
+                setState(() => _isCheckingOut = true);
+
+                try {
+                  final cart = context.read<CartController>();
+
+                  final orderCode = (cart.lastOrderId ?? '').trim();
+                  if (orderCode.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Pedido ainda não foi criado.')),
+                    );
+                    return;
+                  }
+
+                  final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderCode";
+                  debugPrint('>>> Abrindo URL de pagamento: $url');
+                  await _openUrlExternal(url);
+
+                  // ✅ AQUI 👇
+                  cart.clear();
+
+                } catch (e) {
+                  debugPrint('>>> onCheckout erro: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erro ao abrir pagamento: $e')),
                   );
                 } finally {
                   if (mounted) setState(() => _isCheckingOut = false);

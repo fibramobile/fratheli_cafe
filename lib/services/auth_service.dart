@@ -33,11 +33,18 @@ class AuthService {
 
     // Espera: { token: "...", user: { id, name, email } }
     final token = body['token']?.toString();
-    final user = body['user'];
 
-    if (token == null || token.isEmpty || user == null) {
+    final rawUser = body['user'];
+
+    if (token == null || token.isEmpty || rawUser == null) {
       throw Exception('Resposta inválida do servidor.');
     }
+
+// 👇 transforma em Map editável
+    final user = Map<String, dynamic>.from(rawUser);
+
+// 👇 garante que role sempre exista
+    user['role'] = (user['role'] ?? 'user').toString();
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);

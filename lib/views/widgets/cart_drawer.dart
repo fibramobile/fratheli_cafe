@@ -1017,6 +1017,36 @@ class CartDrawer extends StatelessWidget {
                           contentPadding: EdgeInsets.zero,
                           activeColor: FratheliColors.gold2,
                         ),
+
+                        RadioListTile<FreightMode>(
+                          value: FreightMode.external,
+                          groupValue: cart.freightMode,
+                          onChanged: (_) async {
+                            // marca como external e abre o dialog
+                            cart.freightMode = FreightMode.external;
+                            cart.notifyListeners();
+
+                            await showExternalPurchaseDialog(context);
+
+                            // se cancelou e não salvou, volta pro calculado
+                            if (!cart.isExternalOk) {
+                              cart.setCalculatedMode();
+                            }
+                          },
+                          title: const Text("Compra externa",
+                              style: TextStyle(color: FratheliColors.text)),
+                          subtitle: Text(
+                            cart.externalTitle?.isNotEmpty == true
+                                ? "Título: ${cart.externalTitle}"
+                                : "Ex: Retirada na loja / Compra via Instagram",
+                            style: const TextStyle(color: FratheliColors.text2),
+                          ),
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: FratheliColors.gold2,
+                        ),
+                        
                       ],
                     ),
                   ),
@@ -1476,6 +1506,26 @@ class CartDrawer extends StatelessWidget {
                           return;
                         }
 
+                        // ✅ COMPRA EXTERNA: exige título, mas AINDA cria o pedido aqui
+                        if (cart.freightMode == FreightMode.external) {
+                          if (!cart.isExternalOk) {
+                            await showExternalPurchaseDialog(context);
+                            if (!cart.isExternalOk) return; // cancelou
+                          }
+
+                          // Preenche customer com algo mínimo (pra backend não quebrar)
+                          cart.setCustomerData(
+                            name: cart.externalTitle!.trim(),
+                            phone: (cart.customerPhone?.trim().isNotEmpty == true) ? cart.customerPhone!.trim() : "-",
+                            cpf: (cart.customerCpf?.trim().isNotEmpty == true) ? cart.customerCpf!.trim() : "-",
+                            address: (cart.externalDescription?.trim().isNotEmpty == true)
+                                ? cart.externalDescription!.trim()
+                                : "Compra externa",
+                          );
+
+                          // ✅ pula CEP e pula dialog de endereço/CPF e continua o fluxo
+                        }
+
                         // 2️⃣ Validação de frete calculado
                         if (cart.freightMode == FreightMode.calculated) {
                           final cep = cepController.text.trim();
@@ -1606,6 +1656,7 @@ class CartDrawer extends StatelessWidget {
                           };
                         }).toList();
 
+                        /*
                         final payload = {
                           "items": items,
                           "subtotal": cart.subtotal,
@@ -1618,6 +1669,35 @@ class CartDrawer extends StatelessWidget {
                           "paymentProvider": "PIX_MANUAL",
                           "paymentStatus": "AGUARDANDO_PAGAMENTO",
                           "shippingStatus": "AGUARDANDO_PAGAMENTO",
+                          "customer": {
+                            "name": cart.customerName,
+                            "phone": cart.customerPhone,
+                            "cpf": cart.customerCpf,
+                            "address": cart.customerAddress,
+                          }
+                        };
+                        */
+                        final payload = {
+                          "items": items,
+                          "subtotal": cart.subtotal,
+
+                          "shipping": (cart.freightMode == FreightMode.calculated)
+                              ? (cart.freightValue ?? 0)
+                              : 0,
+
+                          "shippingService": cart.freightService ?? "",
+                          "shippingDeadline": cart.freightDeadline ?? "",
+
+                          "freightMode": cart.freightMode.name,
+                          "externalTitle": cart.externalTitle ?? "",
+                          "externalDescription": cart.externalDescription ?? "",
+                          "cep": cart.cep ?? "",
+
+                          "total": cart.totalWithFreight,
+                          "paymentProvider": "PIX_MANUAL",
+                          "paymentStatus": "AGUARDANDO_PAGAMENTO",
+                          "shippingStatus": "AGUARDANDO_PAGAMENTO",
+
                           "customer": {
                             "name": cart.customerName,
                             "phone": cart.customerPhone,

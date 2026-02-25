@@ -28,6 +28,7 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
       if (!mounted) return;
       setState(() {
         _user = data['user']; // ✅ garante name/email certos
+
       });
     });
   }
