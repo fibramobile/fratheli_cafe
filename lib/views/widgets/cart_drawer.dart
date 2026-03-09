@@ -849,6 +849,71 @@ class CartDrawer extends StatelessWidget {
     context.read<CartController>().clear();
   }
 
+  Map<String, dynamic> _buildNormalPayload(CartController cart) {
+    final items = cart.items.map((i) {
+      final unit = double.tryParse(i.product.price.toString()) ?? 0.0;
+      final qty = i.quantity;
+
+      return {
+        "sku": i.product.sku,
+        "qty": qty,
+        "name": i.product.name,
+        "grind": i.grind,
+        "unitPrice": unit,
+        "lineTotal": unit * qty,
+      };
+    }).toList();
+
+    final shippingValue = cart.freightMode == FreightMode.calculated
+        ? (cart.freightValue ?? 0.0)
+        : 0.0;
+
+    final totalValue = cart.subtotal + shippingValue;
+
+    return {
+      "items": items,
+      "subtotal": cart.subtotal,
+      "shipping": shippingValue,
+      "shippingService": cart.freightService ?? "",
+      "shippingDeadline": cart.freightDeadline ?? "",
+      "total": totalValue,
+      "paymentProvider": "PIX_MANUAL",
+      "paymentStatus": "AGUARDANDO_PAGAMENTO",
+      "shippingStatus": "AGUARDANDO_PAGAMENTO",
+      "customer": {
+        "name": cart.customerName ?? '',
+        "phone": cart.customerPhone ?? '',
+        "cpf": cart.customerCpf ?? '',
+        "address": cart.customerAddress ?? '',
+      }
+    };
+  }
+
+  Future<void> _showLoginRequiredDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Login necessário'),
+        content: const Text(
+          'Para finalizar o pedido, você precisa entrar na sua conta.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Agora não'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pushNamed(context, '/login'); // ajuste se sua rota for outra
+            },
+            child: const Text('Fazer login'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Map<String, dynamic> _buildPayload(CartController cart, {required bool isExternal}) {
     final items = cart.items.map((i) {
       final unit = double.tryParse(i.product.price.toString()) ?? 0.0;
@@ -1148,26 +1213,45 @@ class CartDrawer extends StatelessWidget {
 
                   // ✅ CEP + CALCULAR (só se calculated)
                   if (cart.freightMode == FreightMode.calculated) ...[
-                    TextField(
-                      controller: cepController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        MaskTextInputFormatter(
-                          mask: '#####-###',
-                          filter: {"#": RegExp(r'[0-9]')},
-                        )
-                      ],
-                      style: const TextStyle(color: FratheliColors.text),
-                      decoration: InputDecoration(
-                        labelText: "CEP",
-                        hintText: "00000-000",
-                        filled: true,
-                        fillColor: FratheliColors.surface,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: FratheliColors.border),
-                        ),
-                      ),
+                    FutureBuilder<Map<String, dynamic>?>(
+                      future: AuthService.fetchClientProfile(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          final profile = snapshot.data;
+                          final address = profile?['address'];
+
+                          String savedCep = '';
+
+                          if (address is Map) {
+                            savedCep = ((address['zip'] ?? address['cep']) ?? '').toString().trim();
+                          }
+
+                          if (cepController.text.trim().isEmpty && savedCep.isNotEmpty) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (cepController.text.trim().isEmpty) {
+                                cepController.text = savedCep;
+                              }
+                            });
+                          }
+                        }
+
+                        return TextField(
+                          controller: cepController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [cepMask],
+                          style: const TextStyle(color: FratheliColors.text),
+                          decoration: InputDecoration(
+                            labelText: "CEP",
+                            hintText: "00000-000",
+                            filled: true,
+                            fillColor: FratheliColors.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: FratheliColors.border),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
@@ -1183,7 +1267,17 @@ class CartDrawer extends StatelessWidget {
                         onPressed: () async {
                           final cep = cepController.text.trim();
                           final rawCep = cep.replaceAll(RegExp(r'\D'), '');
-                          if (rawCep.length != 8) return;
+
+                          if (rawCep.length != 8) {
+                            showDialog(
+                              context: context,
+                              builder: (_) => const AlertDialog(
+                                title: Text('CEP inválido'),
+                                content: Text('Digite um CEP válido para calcular o frete.'),
+                              ),
+                            );
+                            return;
+                          }
 
                           onCepSaved(cep);
                           await onCalculateFreight(rawCep);
@@ -1621,12 +1715,22 @@ class CartDrawer extends StatelessWidget {
                         }
                         */
                         if (cart.freightMode == FreightMode.external) {
-                          if (!cart.isExternalOk) {
-                            await showExternalPurchaseDialog(context);
-                            if (!cart.isExternalOk) return; // cancelou
+                          final isAdmin = await AuthService.isAdmin();
+                          if (!isAdmin) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Apenas administradores podem usar compra externa.')),
+                              );
+                            }
+                            cart.setCalculatedMode();
+                            return;
                           }
 
-                          // garante customer mínimo (pra orders não quebrar)
+                          if (!cart.isExternalOk) {
+                            await showExternalPurchaseDialog(context);
+                            if (!cart.isExternalOk) return;
+                          }
+
                           cart.setCustomerData(
                             name: (cart.externalTitle ?? "Compra externa").trim(),
                             phone: (cart.customerPhone?.trim().isNotEmpty == true) ? cart.customerPhone!.trim() : "-",
@@ -1673,19 +1777,82 @@ class CartDrawer extends StatelessWidget {
                           onCepSaved(cep);
                         }
 
-                        // 3️⃣ Dialog para dados do cliente
+
+
+                        // 2.5️⃣ Verifica autenticação
+                        final token = await AuthService.getToken();
+                        if (token == null || token.trim().isEmpty) {
+                          await _showLoginRequiredDialog(context);
+                          return;
+                        }
+
+// 2.6️⃣ Carrega dados para pré-preencher o formulário
+                        String initialName = '';
+                        String initialPhone = '';
+                        String initialCpf = '';
+                        String initialAddress = '';
+
+                        final user = await AuthService.getUser();
+                        if (user != null) {
+                          initialName = (user['name'] ?? '').toString().trim();
+                        }
+
+                        final profile = await AuthService.fetchClientProfile();
+                        if (profile != null) {
+                          initialPhone = (profile['phone'] ?? '').toString().trim();
+                          initialCpf = (profile['cpf'] ?? '').toString().trim();
+
+                          final address = profile['address'];
+
+                          if (address is Map) {
+                            final street = (address['street'] ?? '').toString().trim();
+                            final number = (address['number'] ?? '').toString().trim();
+                            final neighborhood = (address['neighborhood'] ?? '').toString().trim();
+                            final city = (address['city'] ?? '').toString().trim();
+                            final state = (address['state'] ?? '').toString().trim();
+                            final typedCep = cepController.text.trim();
+                            final zip = typedCep.isNotEmpty
+                                ? typedCep
+                                : ((address['zip'] ?? address['cep']) ?? '').toString().trim();
+                            final complement = (address['complement'] ?? '').toString().trim();
+
+                            final parts = <String>[
+                              if (street.isNotEmpty) street,
+                              if (number.isNotEmpty) number,
+                              if (complement.isNotEmpty) complement,
+                              if (neighborhood.isNotEmpty) neighborhood,
+                              if (city.isNotEmpty) city,
+                              if (state.isNotEmpty) state,
+                              if (zip.isNotEmpty) 'CEP: $zip',
+                            ];
+
+                            initialAddress = parts.join(', ');
+                          } else {
+                            initialAddress = (profile['address'] ?? '').toString().trim();
+                          }
+                        }
+
+// 3️⃣ Dialog para dados do cliente
                         final result = await showDialog<Map<String, String>>(
                           context: context,
                           barrierDismissible: false,
                           builder: (ctx) {
                             final formKey = GlobalKey<FormState>();
-                            final nameController = TextEditingController();
-                            final phoneController = TextEditingController();
-                            final cpfController = TextEditingController();
-                            final addressController = TextEditingController();
+                            final nameController = TextEditingController(text: initialName);
+                            final phoneController = TextEditingController(text: initialPhone);
+                            final cpfController = TextEditingController(text: initialCpf);
+                            final addressController = TextEditingController(text: initialAddress);
 
                             return AlertDialog(
-                              title: const Text('Dados para envio'),
+                              backgroundColor: FratheliColors.surface,
+                              surfaceTintColor: Colors.transparent,
+                              title: const Text(
+                                'Dados para envio',
+                                style: TextStyle(
+                                  color: FratheliColors.text,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                               content: Form(
                                 key: formKey,
                                 child: SingleChildScrollView(
@@ -1693,34 +1860,75 @@ class CartDrawer extends StatelessWidget {
                                     children: [
                                       TextFormField(
                                         controller: nameController,
-                                        decoration: const InputDecoration(labelText: 'Nome completo'),
+                                        style: const TextStyle(color: FratheliColors.text),
+                                        decoration: const InputDecoration(
+                                          labelText: 'Nome completo',
+                                          labelStyle: TextStyle(color: FratheliColors.text2),
+                                          filled: true,
+                                          fillColor: FratheliColors.surfaceAlt,
+                                        ),
                                         validator: (v) =>
-                                        v == null || v.length < 3 ? 'Informe o nome completo' : null,
+                                        v == null || v.trim().length < 3
+                                            ? 'Informe o nome completo'
+                                            : null,
                                       ),
-                                      const SizedBox(height: 8),
+
+                                      const SizedBox(height: 10),
+
                                       TextFormField(
                                         controller: phoneController,
-                                        decoration:
-                                        const InputDecoration(labelText: 'Telefone (WhatsApp)'),
-                                        validator: (v) =>
-                                        v == null || v.length < 10 ? 'Telefone inválido' : null,
+                                        keyboardType: TextInputType.phone,
+                                        inputFormatters: [phoneMask],
+                                        style: const TextStyle(color: FratheliColors.text),
+                                        decoration: const InputDecoration(
+                                          labelText: 'Telefone (WhatsApp)',
+                                          labelStyle: TextStyle(color: FratheliColors.text2),
+                                          filled: true,
+                                          fillColor: FratheliColors.surfaceAlt,
+                                        ),
+                                        validator: (v) {
+                                          final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                                          if (digits.length < 10) return 'Telefone inválido';
+                                          return null;
+                                        },
                                       ),
-                                      const SizedBox(height: 8),
+
+                                      const SizedBox(height: 10),
+
                                       TextFormField(
                                         controller: cpfController,
-                                        decoration: const InputDecoration(labelText: 'CPF'),
-                                        validator: (v) =>
-                                        v == null || v.length < 11 ? 'CPF inválido' : null,
+                                        keyboardType: TextInputType.number,
+                                        inputFormatters: [cpfMask],
+                                        style: const TextStyle(color: FratheliColors.text),
+                                        decoration: const InputDecoration(
+                                          labelText: 'CPF',
+                                          labelStyle: TextStyle(color: FratheliColors.text2),
+                                          filled: true,
+                                          fillColor: FratheliColors.surfaceAlt,
+                                        ),
+                                        validator: (v) {
+                                          final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                                          if (digits.length != 11) return 'CPF inválido';
+                                          return null;
+                                        },
                                       ),
-                                      const SizedBox(height: 8),
+
+                                      const SizedBox(height: 10),
+
                                       TextFormField(
                                         controller: addressController,
+                                        style: const TextStyle(color: FratheliColors.text),
                                         decoration: const InputDecoration(
                                           labelText: 'Endereço completo',
+                                          labelStyle: TextStyle(color: FratheliColors.text2),
+                                          filled: true,
+                                          fillColor: FratheliColors.surfaceAlt,
                                         ),
                                         maxLines: 3,
                                         validator: (v) =>
-                                        v == null || v.length < 10 ? 'Endereço inválido' : null,
+                                        v == null || v.trim().length < 10
+                                            ? 'Endereço inválido'
+                                            : null,
                                       ),
                                     ],
                                   ),
@@ -1729,9 +1937,16 @@ class CartDrawer extends StatelessWidget {
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx),
-                                  child: const Text('Cancelar'),
+                                  child: const Text(
+                                    'Cancelar',
+                                    style: TextStyle(color: FratheliColors.text2),
+                                  ),
                                 ),
                                 ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: FratheliColors.gold,
+                                    foregroundColor: Colors.black,
+                                  ),
                                   onPressed: () {
                                     if (!(formKey.currentState?.validate() ?? false)) return;
 
@@ -1751,11 +1966,23 @@ class CartDrawer extends StatelessWidget {
 
                         if (result == null) return;
 
+                        final cep = cepController.text.trim();
+                        var finalAddress = (result['endereco'] ?? '').trim();
+
+                        finalAddress = finalAddress.replaceAll(
+                          RegExp(r'\s*CEP:\s*\d{5}-?\d{3}', caseSensitive: false),
+                          '',
+                        ).trim();
+
+                        if (cep.isNotEmpty) {
+                          finalAddress = '$finalAddress\nCEP: $cep';
+                        }
+
                         cart.setCustomerData(
                           name: result['nome'] ?? '',
                           phone: result['telefone'] ?? '',
                           cpf: result['cpf'] ?? '',
-                          address: result['endereco'] ?? '',
+                          address: finalAddress,
                         );
 
                         // 4️⃣ Montar payload do pedido
@@ -1794,28 +2021,7 @@ class CartDrawer extends StatelessWidget {
                           }
                         };
                         */
-                        final payload = {
-                          "items": items,
-                          "subtotal": cart.subtotal,
-                          "shipping": 0,
-                          "total": cart.subtotal,
-                          "paymentProvider": "PIX_MANUAL",
-                          "paymentStatus": "AGUARDANDO_PAGAMENTO",
-                          "shippingStatus": "AGUARDANDO_PAGAMENTO",
-
-                          // 👇 AQUI ESTÁ A CORREÇÃO
-                          "external": {
-                            "title": (cart.externalTitle ?? "").trim(),
-                            "description": (cart.externalDescription ?? "").trim(),
-                          },
-
-                          "customer": {
-                            "name": cart.externalTitle,
-                            "phone": cart.customerPhone ?? "-",
-                            "cpf": cart.customerCpf ?? "-",
-                            "address": cart.externalDescription ?? "Compra externa",
-                          }
-                        };
+                        final payload = _buildNormalPayload(cart);
 /*
                         // 5️⃣ Salvar pedido no backend
                         try {
@@ -1835,13 +2041,25 @@ class CartDrawer extends StatelessWidget {
 
                         // 5️⃣ Salvar pedido no backend
                         try {
-                          final orderCode = await OrderService.createOrder(payload); // ✅ agora retorna String
+                          final orderCode = await OrderService.createOrder(payload);
                           cart.lastOrderId = orderCode;
                         } catch (e) {
+                          final msg = e.toString().toLowerCase();
+
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Erro ao salvar pedido: $e')),
-                            );
+                            if (msg.contains('usuário não autenticado') ||
+                                msg.contains('usuario não autenticado') ||
+                                msg.contains('usuario nao autenticado') ||
+                                msg.contains('unauthorized') ||
+                                msg.contains('401') ||
+                                msg.contains('token inválido') ||
+                                msg.contains('token invalido')) {
+                              await _showLoginRequiredDialog(context);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Erro ao salvar pedido: $e')),
+                              );
+                            }
                           }
                           return;
                         }
