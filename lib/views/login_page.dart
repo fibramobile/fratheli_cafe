@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../theme/fratheli_colors.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -59,6 +60,44 @@ class _LoginPageState extends State<LoginPage> {
     final isWide = MediaQuery.of(context).size.width >= 700;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: FratheliColors.bg,
+        elevation: 0,
+        foregroundColor: FratheliColors.text,
+        titleSpacing: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2),
+          child: Container(
+            height: 2,
+            color: FratheliColors.gold.withOpacity(0.5),
+          ),
+        ),
+        title: Row(
+          children: [
+            Image.asset('assets/img/logo_escuro.png', width: 30, height: 30),
+            const SizedBox(width: 10),
+            RichText(
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'FRATHÉLI ',
+                    style: TextStyle(color: FratheliColors.brown),
+                  ),
+                  TextSpan(
+                    text: 'CAFÉ',
+                    style: TextStyle(color: FratheliColors.gold2),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
