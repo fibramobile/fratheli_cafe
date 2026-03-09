@@ -205,12 +205,28 @@ class AuthService {
   }
 
   static Future<String> getRole() async {
+    try {
+      final me = await fetchMyAccount();
+      final role = (me['user']?['role'] ?? '').toString().trim();
+
+      if (role.isNotEmpty) {
+        // atualiza o cache local também
+        final prefs = await SharedPreferences.getInstance();
+        final currentUser = await getUser() ?? {};
+        currentUser['role'] = role;
+        await prefs.setString('auth_user', jsonEncode(currentUser));
+
+        return role;
+      }
+    } catch (_) {}
+
     final u = await getUser();
     return (u?['role'] ?? 'user').toString();
   }
 
   static Future<bool> isAdmin() async {
     final role = await getRole();
+    debugPrint('ROLE DETECTADA: $role');
     return role.toLowerCase() == 'admin';
   }
 
