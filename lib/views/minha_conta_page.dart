@@ -17,7 +17,132 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
   Map<String, dynamic>? _profile;
   bool _loadingProfile = true;
   late Future<Map<String, dynamic>> _accountFuture;
+  bool _profileDialogShown = false;
 
+  bool _isProfileIncomplete() {
+    final name = (_user?['name'] ?? '').toString().trim();
+    final phone = (_profile?['phone'] ?? '').toString().trim();
+    final cpf = (_profile?['cpf'] ?? '').toString().trim();
+    final address = _formatAddress(_profile?['address']).trim();
+
+    final phoneDigits = phone.replaceAll(RegExp(r'\D'), '');
+    final cpfDigits = cpf.replaceAll(RegExp(r'\D'), '');
+
+    return name.length < 3 ||
+        phoneDigits.length < 10 ||
+        cpfDigits.length != 11 ||
+        address.isEmpty ||
+        address == '—';
+  }
+
+  List<String> _missingProfileFields() {
+    final missing = <String>[];
+
+    final name = (_user?['name'] ?? '').toString().trim();
+    final phone = (_profile?['phone'] ?? '').toString().trim();
+    final cpf = (_profile?['cpf'] ?? '').toString().trim();
+    final address = _formatAddress(_profile?['address']).trim();
+
+    final phoneDigits = phone.replaceAll(RegExp(r'\D'), '');
+    final cpfDigits = cpf.replaceAll(RegExp(r'\D'), '');
+
+    if (name.length < 3) missing.add('Nome');
+    if (phoneDigits.length < 10) missing.add('Telefone');
+    if (cpfDigits.length != 11) missing.add('CPF');
+    if (address.isEmpty || address == '—') missing.add('Endereço');
+
+    return missing;
+  }
+  Future<void> _showCompleteProfileDialog() async {
+    if (!mounted || _profileDialogShown) return;
+
+    _profileDialogShown = true;
+    final missing = _missingProfileFields();
+
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: FratheliColors.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Text(
+            'Complete seu perfil',
+            style: TextStyle(
+              color: FratheliColors.text,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Para aproveitar melhor sua experiência na Frathéli, complete seus dados cadastrais.',
+                style: TextStyle(
+                  color: FratheliColors.text2,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (missing.isNotEmpty) ...[
+                const Text(
+                  'Campos pendentes:',
+                  style: TextStyle(
+                    color: FratheliColors.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...missing.map(
+                      (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 18,
+                          color: FratheliColors.gold2,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          item,
+                          style: const TextStyle(
+                            color: FratheliColors.text,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Depois',
+                style: TextStyle(color: FratheliColors.text2),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await _openEditProfileDialog();
+              },
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Editar agora'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -35,6 +160,12 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
         _user = data['user'];
         _profile = profile;
         _loadingProfile = false;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _isProfileIncomplete()) {
+          _showCompleteProfileDialog();
+        }
       });
     }).catchError((_) {
       if (!mounted) return;
@@ -237,6 +368,13 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
       setState(() {
         _user = refreshed['user'];
         _profile = refreshedProfile;
+        _profileDialogShown = false;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _isProfileIncomplete()) {
+          _showCompleteProfileDialog();
+        }
       });
     }
   }
@@ -493,6 +631,42 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
               ),
             ),
 
+                const SizedBox(height: 14),
+
+                // ✅ Card pequeno de “atalhos” (opcional)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: FratheliColors.surface,
+                    border: Border.all(color: FratheliColors.border),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.pushNamed(context, '/'),
+                          icon: const Icon(Icons.storefront_rounded),
+                          label: const Text('Voltar à loja'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            // futuro: histórico
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Em breve: histórico de pontos ✅')),
+                            );
+                          },
+                          icon: const Icon(Icons.receipt_long_rounded),
+                          label: const Text('Histórico'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
                 const SizedBox(height: 14),
 
@@ -696,42 +870,6 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
                   ),
                 ),
 
-                const SizedBox(height: 14),
-
-                // ✅ Card pequeno de “atalhos” (opcional)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: FratheliColors.surface,
-                    border: Border.all(color: FratheliColors.border),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.pushNamed(context, '/'),
-                          icon: const Icon(Icons.storefront_rounded),
-                          label: const Text('Voltar à loja'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            // futuro: histórico
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Em breve: histórico de pontos ✅')),
-                            );
-                          },
-                          icon: const Icon(Icons.receipt_long_rounded),
-                          label: const Text('Histórico'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
                 ],
