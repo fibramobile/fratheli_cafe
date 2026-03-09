@@ -74,9 +74,9 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
+                      const Text(
                         'Entrar',
-                        style: Theme.of(context).textTheme.headlineSmall,
+                        style:  TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 6),
@@ -90,9 +90,20 @@ class _LoginPageState extends State<LoginPage> {
                       TextFormField(
                         controller: _emailCtrl,
                         keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(
+                          color: Colors.black87, // cor do texto digitado
+                          fontWeight: FontWeight.w500,
+                        ),
                         decoration: const InputDecoration(
                           labelText: 'Email',
+                          labelStyle: TextStyle(color: Colors.black54),
                           border: OutlineInputBorder(),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.black26),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.orangeAccent, width: 1.5),
+                          ),
                         ),
                         validator: (v) {
                           final s = (v ?? '').trim();
@@ -106,12 +117,26 @@ class _LoginPageState extends State<LoginPage> {
                       TextFormField(
                         controller: _passCtrl,
                         obscureText: _obscure,
+                        style: const TextStyle(
+                          color: Colors.black87, // cor do texto digitado
+                          fontWeight: FontWeight.w500,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Senha',
+                          labelStyle: const TextStyle(color: Colors.black54),
                           border: const OutlineInputBorder(),
+                          enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.black26),
+                          ),
+                          focusedBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.orangeAccent, width: 1.5),
+                          ),
                           suffixIcon: IconButton(
                             onPressed: () => setState(() => _obscure = !_obscure),
-                            icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                            icon: Icon(
+                              _obscure ? Icons.visibility : Icons.visibility_off,
+                              color: Colors.black54,
+                            ),
                           ),
                         ),
                         validator: (v) {

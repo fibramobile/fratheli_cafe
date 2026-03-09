@@ -99,6 +99,38 @@ class OrderService {
     throw Exception('Resposta inválida do servidor (order.id não veio).');
   }
 
+  static Future<String> createExternalOrder(Map<String, dynamic> payload) async {
+    final token = await AuthService.getToken();
+    if (token == null || token.isEmpty) throw Exception('Usuário não autenticado');
+
+    final uri = Uri.parse('$baseUrl/orders/create_external.php');
+
+    debugPrint('🧾 [createExternalOrder] POST => $uri');
+    debugPrint('🧾 [createExternalOrder] payload => ${jsonEncode(payload)}');
+
+    final res = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode(payload),
+    );
+
+    debugPrint('🧾 [createExternalOrder] status=${res.statusCode}');
+    debugPrint('🧾 [createExternalOrder] rawBody=${res.body}');
+
+    final body = safeJson(res.body);
+    if (res.statusCode != 200) {
+      throw Exception((body['error'] ?? 'Erro no servidor').toString());
+    }
+
+    final code = (body['order']?['id'] ?? '').toString();
+    if (code.isEmpty) throw Exception('Resposta inválida do servidor (order.id vazio).');
+    return code;
+  }
+
   static Future<Map<String, dynamic>> fetchOrder(String orderId) async {
     final token = await AuthService.getToken();
     if (token == null) throw Exception('Usuário não autenticado');

@@ -668,6 +668,7 @@ import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../controllers/cart_controller.dart';
 import '../../services/auth_service.dart';
@@ -684,6 +685,7 @@ class CartDrawer extends StatelessWidget {
   final VoidCallback onCheckout;
   final VoidCallback onClear;
   final Future<void> Function(String cep) onCalculateFreight;
+  static const String kWebBaseUrl = "https://frathelicafe.com.br";
 
   const CartDrawer({
     super.key,
@@ -780,33 +782,121 @@ class CartDrawer extends StatelessWidget {
     );
   }
 
-  InputDecoration _inputDecoration(String label, {String? hint}) {
-    return InputDecoration(
-      labelText: label,
-      hintText: hint,
-      filled: true,
-      fillColor: FratheliColors.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: FratheliColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: FratheliColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: FratheliColors.gold, width: 1.2),
-      ),
-    );
+  List<Map<String, dynamic>> _buildItems(CartController cart) {
+    return cart.items.map((i) {
+      final unit = double.tryParse(i.product.price.toString()) ?? 0.0;
+      final qty = i.quantity;
+
+      return {
+        "sku": i.product.sku,
+        "qty": qty,
+        "name": i.product.name,
+        "grind": i.grind,
+        "unitPrice": unit,
+        "lineTotal": unit * qty,
+      };
+    }).toList();
+  }
+/*
+  Map<String, dynamic> _buildPayload(CartController cart) {
+    final items = _buildItems(cart);
+
+    final shipping = (cart.freightMode == FreightMode.calculated)
+        ? (cart.freightValue ?? 0)
+        : 0;
+
+    return {
+      "items": items,
+      "subtotal": cart.subtotal,
+      "shipping": shipping,
+      "shippingService": cart.freightService ?? "",
+      "shippingDeadline": cart.freightDeadline ?? "",
+
+      "freightMode": cart.freightMode.name,
+      "externalTitle": cart.externalTitle ?? "",
+      "externalDescription": cart.externalDescription ?? "",
+      "cep": cart.cep ?? "",
+
+      "total": cart.subtotal + shipping,
+
+      "paymentProvider": "PIX_MANUAL",
+      "paymentStatus": "AGUARDANDO_PAGAMENTO",
+      "shippingStatus": "AGUARDANDO_PAGAMENTO",
+
+      "customer": {
+        "name": cart.customerName ?? "",
+        "phone": cart.customerPhone ?? "",
+        "cpf": cart.customerCpf ?? "",
+        "address": cart.customerAddress ?? "",
+      }
+    };
+  }
+*/
+  Future<void> _openUrlExternal(String url) async {
+    final uri = Uri.parse(url);
+
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    )) {
+      throw Exception('Não foi possível abrir $url');
+    }
   }
 
-  BoxDecoration _cardBox() {
-    return BoxDecoration(
-      color: FratheliColors.surfaceAlt,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: FratheliColors.border),
-    );
+  Future<void> _goToPixAndClear(BuildContext context, String orderCode) async {
+    final url = "$kWebBaseUrl/pagamento_order.html?orderId=$orderCode";
+    await _openUrlExternal(url);
+    context.read<CartController>().clear();
+  }
+
+  Map<String, dynamic> _buildPayload(CartController cart, {required bool isExternal}) {
+    final items = cart.items.map((i) {
+      final unit = double.tryParse(i.product.price.toString()) ?? 0.0;
+      final qty = i.quantity;
+      return {
+        "sku": i.product.sku,
+        "qty": qty,
+        "name": i.product.name,
+        "grind": i.grind,
+        "unitPrice": unit,
+        "lineTotal": unit * qty,
+      };
+    }).toList();
+
+    final shipping = (cart.freightMode == FreightMode.calculated)
+        ? (cart.freightValue ?? 0)
+        : 0.0;
+
+    final total = cart.subtotal + shipping;
+
+    // ✅ Payload base (orders)
+    final payload = <String, dynamic>{
+      "items": items,
+      "subtotal": cart.subtotal,
+      "shipping": isExternal ? 0 : shipping,
+      "shippingService": cart.freightService ?? "",
+      "shippingDeadline": cart.freightDeadline ?? "",
+      "total": isExternal ? cart.subtotal : total,
+      "paymentProvider": "PIX_MANUAL",
+      "paymentStatus": "AGUARDANDO_PAGAMENTO",
+      "shippingStatus": "AGUARDANDO_PAGAMENTO",
+      "customer": {
+        "name": cart.customerName ?? "",
+        "phone": cart.customerPhone ?? "",
+        "cpf": cart.customerCpf ?? "",
+        "address": cart.customerAddress ?? "",
+      },
+    };
+
+    // ✅ EXTERNA: adiciona bloco que o PHP espera
+    if (isExternal) {
+      payload["external"] = {
+        "title": (cart.externalTitle ?? "").trim(),
+        "description": (cart.externalDescription ?? "").trim(),
+      };
+    }
+
+    return payload;
   }
 
   @override
@@ -1018,33 +1108,36 @@ class CartDrawer extends StatelessWidget {
                           activeColor: FratheliColors.gold2,
                         ),
 
-                        RadioListTile<FreightMode>(
-                          value: FreightMode.external,
-                          groupValue: cart.freightMode,
-                          onChanged: (_) async {
-                            // marca como external e abre o dialog
-                            cart.freightMode = FreightMode.external;
-                            cart.notifyListeners();
+                        FutureBuilder<bool>(
+                          future: AuthService.isAdmin(),
+                          builder: (context, snap) {
+                            final admin = snap.data == true;
+                            if (!admin) return const SizedBox.shrink();
 
-                            await showExternalPurchaseDialog(context);
-
-                            // se cancelou e não salvou, volta pro calculado
-                            if (!cart.isExternalOk) {
-                              cart.setCalculatedMode();
-                            }
+                            return RadioListTile<FreightMode>(
+                              value: FreightMode.external,
+                              groupValue: cart.freightMode,
+                              onChanged: (_) async {
+                                cart.setExternalMode();
+                                await showExternalPurchaseDialog(context);
+                                if (!cart.isExternalOk) cart.setCalculatedMode();
+                              },
+                              title: const Text(
+                                "Compra externa",
+                                style: TextStyle(color: FratheliColors.text),
+                              ),
+                              subtitle: Text(
+                                cart.externalTitle?.isNotEmpty == true
+                                    ? "Título: ${cart.externalTitle}"
+                                    : "Ex: Retirada na loja / Compra via Instagram",
+                                style: const TextStyle(color: FratheliColors.text2),
+                              ),
+                              dense: true,
+                              visualDensity: VisualDensity.compact,
+                              contentPadding: EdgeInsets.zero,
+                              activeColor: FratheliColors.gold2,
+                            );
                           },
-                          title: const Text("Compra externa",
-                              style: TextStyle(color: FratheliColors.text)),
-                          subtitle: Text(
-                            cart.externalTitle?.isNotEmpty == true
-                                ? "Título: ${cart.externalTitle}"
-                                : "Ex: Retirada na loja / Compra via Instagram",
-                            style: const TextStyle(color: FratheliColors.text2),
-                          ),
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.zero,
-                          activeColor: FratheliColors.gold2,
                         ),
                         
                       ],
@@ -1507,6 +1600,7 @@ class CartDrawer extends StatelessWidget {
                         }
 
                         // ✅ COMPRA EXTERNA: exige título, mas AINDA cria o pedido aqui
+                        /*
                         if (cart.freightMode == FreightMode.external) {
                           if (!cart.isExternalOk) {
                             await showExternalPurchaseDialog(context);
@@ -1524,6 +1618,29 @@ class CartDrawer extends StatelessWidget {
                           );
 
                           // ✅ pula CEP e pula dialog de endereço/CPF e continua o fluxo
+                        }
+                        */
+                        if (cart.freightMode == FreightMode.external) {
+                          if (!cart.isExternalOk) {
+                            await showExternalPurchaseDialog(context);
+                            if (!cart.isExternalOk) return; // cancelou
+                          }
+
+                          // garante customer mínimo (pra orders não quebrar)
+                          cart.setCustomerData(
+                            name: (cart.externalTitle ?? "Compra externa").trim(),
+                            phone: (cart.customerPhone?.trim().isNotEmpty == true) ? cart.customerPhone!.trim() : "-",
+                            cpf: (cart.customerCpf?.trim().isNotEmpty == true) ? cart.customerCpf!.trim() : "-",
+                            address: (cart.externalDescription?.trim().isNotEmpty == true)
+                                ? cart.externalDescription!.trim()
+                                : "Compra externa",
+                          );
+
+                          final payload = _buildPayload(cart, isExternal: true);
+
+                          final orderCode = await OrderService.createExternalOrder(payload);
+                          await _goToPixAndClear(context, orderCode);
+                          return;
                         }
 
                         // 2️⃣ Validação de frete calculado
@@ -1680,29 +1797,23 @@ class CartDrawer extends StatelessWidget {
                         final payload = {
                           "items": items,
                           "subtotal": cart.subtotal,
-
-                          "shipping": (cart.freightMode == FreightMode.calculated)
-                              ? (cart.freightValue ?? 0)
-                              : 0,
-
-                          "shippingService": cart.freightService ?? "",
-                          "shippingDeadline": cart.freightDeadline ?? "",
-
-                          "freightMode": cart.freightMode.name,
-                          "externalTitle": cart.externalTitle ?? "",
-                          "externalDescription": cart.externalDescription ?? "",
-                          "cep": cart.cep ?? "",
-
-                          "total": cart.totalWithFreight,
+                          "shipping": 0,
+                          "total": cart.subtotal,
                           "paymentProvider": "PIX_MANUAL",
                           "paymentStatus": "AGUARDANDO_PAGAMENTO",
                           "shippingStatus": "AGUARDANDO_PAGAMENTO",
 
+                          // 👇 AQUI ESTÁ A CORREÇÃO
+                          "external": {
+                            "title": (cart.externalTitle ?? "").trim(),
+                            "description": (cart.externalDescription ?? "").trim(),
+                          },
+
                           "customer": {
-                            "name": cart.customerName,
-                            "phone": cart.customerPhone,
-                            "cpf": cart.customerCpf,
-                            "address": cart.customerAddress,
+                            "name": cart.externalTitle,
+                            "phone": cart.customerPhone ?? "-",
+                            "cpf": cart.customerCpf ?? "-",
+                            "address": cart.externalDescription ?? "Compra externa",
                           }
                         };
 /*

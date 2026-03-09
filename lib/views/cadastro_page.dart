@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../theme/fratheli_colors.dart';
 
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
@@ -66,99 +67,215 @@ class _CadastroPageState extends State<CadastroPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Criar conta')),
+     // appBar: AppBar(title: const Text('Criar conta')),
+      appBar: AppBar(
+        backgroundColor: FratheliColors.bg,
+        elevation: 0,
+        foregroundColor: FratheliColors.text,
+        titleSpacing: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2),
+          child: Container(
+            height: 2,
+            color: FratheliColors.gold.withOpacity(0.5),
+          ),
+        ),
+        title: Row(
+          children: [
+            Image.asset('assets/img/logo_escuro.png', width: 30, height: 30),
+            const SizedBox(width: 10),
+            RichText(
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'FRATHÉLI ',
+                    style: TextStyle(color: FratheliColors.brown),
+                  ),
+                  TextSpan(
+                    text: 'CAFÉ',
+                    style: TextStyle(color: FratheliColors.gold2),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: _nameCtrl,
-                        decoration: const InputDecoration(labelText: 'Nome'),
-                        validator: (v) {
-                          final s = (v ?? '').trim();
-                          if (s.isEmpty) return 'Informe seu nome';
-                          if (s.length < 2) return 'Nome muito curto';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _emailCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(labelText: 'Email'),
-                        validator: (v) {
-                          final s = (v ?? '').trim();
-                          if (s.isEmpty) return 'Informe seu email';
-                          if (!s.contains('@')) return 'Email inválido';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _whatsCtrl,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          labelText: 'WhatsApp (opcional)',
-                          hintText: 'DDD + número',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _passCtrl,
-                        obscureText: _obscure,
-                        decoration: InputDecoration(
-                          labelText: 'Senha',
-                          suffixIcon: IconButton(
-                            onPressed: () => setState(() => _obscure = !_obscure),
-                            icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+            child: Column(
+              children: [
+
+                const SizedBox(height: 30),
+
+                const Text( 'CRIAR CONTA ',
+                  style: TextStyle(color: FratheliColors.brown),
+                ),
+
+                const SizedBox(height: 30),
+
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextFormField(
+                            controller: _nameCtrl,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Nome',
+                              labelStyle: TextStyle(color: Colors.black54),
+                              border: OutlineInputBorder(),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.black26),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.orangeAccent, width: 1.5),
+                              ),
+                            ),
+                            validator: (v) {
+                              final s = (v ?? '').trim();
+                              if (s.isEmpty) return 'Informe seu nome';
+                              if (s.length < 2) return 'Nome muito curto';
+                              return null;
+                            },
                           ),
-                        ),
-                        validator: (v) {
-                          final s = (v ?? '');
-                          if (s.isEmpty) return 'Informe uma senha';
-                          if (s.length < 6) return 'Use pelo menos 6 caracteres';
-                          return null;
-                        },
+
+                          const SizedBox(height: 12),
+
+                          TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              labelStyle: TextStyle(color: Colors.black54),
+                              border: OutlineInputBorder(),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.black26),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.orangeAccent, width: 1.5),
+                              ),
+                            ),
+                            validator: (v) {
+                              final s = (v ?? '').trim();
+                              if (s.isEmpty) return 'Informe seu email';
+                              if (!s.contains('@')) return 'Email inválido';
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          TextFormField(
+                            controller: _whatsCtrl,
+                            keyboardType: TextInputType.phone,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'WhatsApp (opcional)',
+                              hintText: 'DDD + número',
+                              labelStyle: TextStyle(color: Colors.black54),
+                              border: OutlineInputBorder(),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.black26),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.orangeAccent, width: 1.5),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          TextFormField(
+                            controller: _passCtrl,
+                            obscureText: _obscure,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: 'Senha',
+                              labelStyle: const TextStyle(color: Colors.black54),
+                              border: const OutlineInputBorder(),
+                              enabledBorder: const OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.black26),
+                              ),
+                              focusedBorder: const OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.orangeAccent, width: 1.5),
+                              ),
+                              suffixIcon: IconButton(
+                                onPressed: () => setState(() => _obscure = !_obscure),
+                                icon: Icon(
+                                  _obscure ? Icons.visibility : Icons.visibility_off,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ),
+                            validator: (v) {
+                              final s = (v ?? '');
+                              if (s.isEmpty) return 'Informe uma senha';
+                              if (s.length < 6) return 'Use pelo menos 6 caracteres';
+                              return null;
+                            },
+                          ),
+
+                          if (_error != null) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              _error!,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loading ? null : _submit,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: _loading
+                                  ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                                  : const Text('Criar conta'),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextButton(
+                            onPressed: _loading
+                                ? null
+                                : () => Navigator.of(context).pushReplacementNamed('/login'),
+                            child: const Text('Já tenho conta'),
+                          ),
+                        ],
                       ),
-                      if (_error != null) ...[
-                        const SizedBox(height: 12),
-                        Text(_error!, style: const TextStyle(color: Colors.red)),
-                      ],
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loading ? null : _submit,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: _loading
-                              ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                              : const Text('Criar conta'),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextButton(
-                        onPressed: _loading
-                            ? null
-                            : () => Navigator.of(context).pushReplacementNamed('/login'),
-                        child: const Text('Já tenho conta'),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
+              ],
+            )
           ),
         ),
       ),

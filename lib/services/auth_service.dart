@@ -204,7 +204,15 @@ class AuthService {
     }
   }
 
+  static Future<String> getRole() async {
+    final u = await getUser();
+    return (u?['role'] ?? 'user').toString();
+  }
 
+  static Future<bool> isAdmin() async {
+    final role = await getRole();
+    return role.toLowerCase() == 'admin';
+  }
 
 
 }

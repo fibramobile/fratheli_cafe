@@ -38,6 +38,11 @@ class CartController extends ChangeNotifier {
   String? externalTitle;
   String? externalDescription;
 
+  void setExternalMode() {
+    freightMode = FreightMode.external;
+    notifyListeners();
+  }
+
   bool get isExternalOk =>
       freightMode != FreightMode.external ||
           (externalTitle != null && externalTitle!.trim().isNotEmpty);
