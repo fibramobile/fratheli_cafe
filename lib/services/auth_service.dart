@@ -215,4 +215,64 @@ class AuthService {
   }
 
 
+  static Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Usuário não autenticado');
+
+    final uri = Uri.parse('$baseUrl/account/change_password.php');
+
+    final res = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: jsonEncode({
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      }),
+    );
+
+    final body = safeJson(res.body);
+
+    if (res.statusCode != 200) {
+      throw Exception((body['error'] ?? 'Falha ao alterar senha').toString());
+    }
+  }
+
+
+  static Future<void> updateBasicUser({
+    required String name,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Usuário não autenticado');
+
+    final uri = Uri.parse('$baseUrl/account/update_user.php');
+
+    final res = await http.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: jsonEncode({
+        'name': name,
+      }),
+    );
+
+    final body = safeJson(res.body);
+
+    if (res.statusCode != 200) {
+      throw Exception((body['error'] ?? 'Falha ao atualizar usuário').toString());
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final currentUser = await getUser() ?? {};
+    currentUser['name'] = name;
+    await prefs.setString('auth_user', jsonEncode(currentUser));
+  }
+
 }

@@ -14,7 +14,8 @@ class MinhaContaPage extends StatefulWidget {
 
 class _MinhaContaPageState extends State<MinhaContaPage> {
   Map<String, dynamic>? _user;
-
+  Map<String, dynamic>? _profile;
+  bool _loadingProfile = true;
   late Future<Map<String, dynamic>> _accountFuture;
 
 
@@ -24,15 +25,317 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
 
     _accountFuture = AuthService.fetchMyAccount();
 
-    _accountFuture.then((data) {
+    _accountFuture.then((data) async {
+      if (!mounted) return;
+
+      final profile = await AuthService.fetchClientProfile();
+
       if (!mounted) return;
       setState(() {
-        _user = data['user']; // ✅ garante name/email certos
-
+        _user = data['user'];
+        _profile = profile;
+        _loadingProfile = false;
+      });
+    }).catchError((_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingProfile = false;
       });
     });
   }
 
+  String _formatAddress(dynamic address) {
+    if (address == null) return '—';
+
+    if (address is String) {
+      return address.trim().isEmpty ? '—' : address.trim();
+    }
+
+    if (address is Map) {
+      final street = (address['street'] ?? '').toString().trim();
+      final number = (address['number'] ?? '').toString().trim();
+      final complement = (address['complement'] ?? '').toString().trim();
+      final neighborhood = (address['neighborhood'] ?? '').toString().trim();
+      final city = (address['city'] ?? '').toString().trim();
+      final state = (address['state'] ?? '').toString().trim();
+      final cep = ((address['cep'] ?? address['zip']) ?? '').toString().trim();
+
+      final parts = <String>[
+        if (street.isNotEmpty) street,
+        if (number.isNotEmpty) number,
+        if (complement.isNotEmpty) complement,
+        if (neighborhood.isNotEmpty) neighborhood,
+        if (city.isNotEmpty) city,
+        if (state.isNotEmpty) state,
+        if (cep.isNotEmpty) 'CEP: $cep',
+      ];
+
+      return parts.isEmpty ? '—' : parts.join(', ');
+    }
+
+    return '—';
+  }
+
+  Future<void> _openEditProfileDialog() async {
+    final nameCtrl = TextEditingController(
+      text: (_user?['name'] ?? '').toString(),
+    );
+    final phoneCtrl = TextEditingController(
+      text: (_profile?['phone'] ?? '').toString(),
+    );
+    final cpfCtrl = TextEditingController(
+      text: (_profile?['cpf'] ?? '').toString(),
+    );
+    final addressCtrl = TextEditingController(
+      text: _formatAddress(_profile?['address']) == '—'
+          ? ''
+          : _formatAddress(_profile?['address']),
+    );
+
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: FratheliColors.surface,
+          surfaceTintColor: Colors.transparent,
+          title: const Text(
+            'Editar dados',
+            style: TextStyle(
+              color: FratheliColors.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          content: SizedBox(
+            width: 520,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: nameCtrl,
+                      style: const TextStyle(color: FratheliColors.text),
+                      decoration: const InputDecoration(labelText: 'Nome'),
+                      validator: (v) {
+                        if ((v ?? '').trim().length < 3) return 'Informe seu nome';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      initialValue: (_user?['email'] ?? '').toString(),
+                      enabled: false,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: phoneCtrl,
+                      style: const TextStyle(color: FratheliColors.text),
+                      decoration: const InputDecoration(labelText: 'Telefone'),
+                      validator: (v) {
+                        final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                        if (digits.length < 10) return 'Telefone inválido';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: cpfCtrl,
+                      style: const TextStyle(color: FratheliColors.text),
+                      decoration: const InputDecoration(labelText: 'CPF'),
+                      validator: (v) {
+                        final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                        if (digits.length != 11) return 'CPF inválido';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: addressCtrl,
+                      style: const TextStyle(color: FratheliColors.text),
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Endereço completo Com CEP',
+                      ),
+                      validator: (v) {
+                        if ((v ?? '').trim().length < 8) return 'Endereço inválido';
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (!(formKey.currentState?.validate() ?? false)) return;
+
+                try {
+                  await AuthService.updateBasicUser(
+                    name: nameCtrl.text.trim(),
+                  );
+
+                  await AuthService.upsertClientProfile(
+                    cpf: cpfCtrl.text.trim(),
+                    phone: phoneCtrl.text.trim(),
+                    address: {
+                      'street': addressCtrl.text.trim(),
+                    },
+                  );
+
+                  if (!mounted) return;
+
+                  setState(() {
+                    _user = {
+                      ...?_user,
+                      'name': nameCtrl.text.trim(),
+                    };
+
+                    _profile = {
+                      ...?_profile,
+                      'cpf': cpfCtrl.text.trim(),
+                      'phone': phoneCtrl.text.trim(),
+                      'address': {
+                        'street': addressCtrl.text.trim(),
+                      },
+                    };
+                  });
+
+                  Navigator.pop(ctx, true);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Dados atualizados com sucesso')),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erro ao atualizar dados: $e')),
+                  );
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      final refreshed = await AuthService.fetchMyAccount();
+      final refreshedProfile = await AuthService.fetchClientProfile();
+
+      if (!mounted) return;
+      setState(() {
+        _user = refreshed['user'];
+        _profile = refreshedProfile;
+      });
+    }
+  }
+
+  Future<void> _openChangePasswordDialog() async {
+    final currentCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: FratheliColors.surface,
+          surfaceTintColor: Colors.transparent,
+          title: const Text(
+            'Alterar senha',
+            style: TextStyle(
+              color: FratheliColors.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          content: SizedBox(
+            width: 460,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: currentCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Senha atual'),
+                    validator: (v) {
+                      if ((v ?? '').isEmpty) return 'Informe a senha atual';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: newCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Nova senha'),
+                    validator: (v) {
+                      if ((v ?? '').length < 6) return 'Mínimo 6 caracteres';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: confirmCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Confirmar nova senha'),
+                    validator: (v) {
+                      if (v != newCtrl.text) return 'As senhas não coincidem';
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (!(formKey.currentState?.validate() ?? false)) return;
+
+                try {
+                  await AuthService.changePassword(
+                    currentPassword: currentCtrl.text,
+                    newPassword: newCtrl.text,
+                  );
+
+                  if (!mounted) return;
+                  Navigator.pop(ctx);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Senha alterada com sucesso')),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erro ao alterar senha: $e')),
+                  );
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Future<void> _load() async {
     final u = await AuthService.getUser();
@@ -46,6 +349,7 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
   }
+
   @override
   Widget build(BuildContext context) {
     final name = (_user?['name'] ?? '').toString();
@@ -110,7 +414,11 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
           constraints: const BoxConstraints(maxWidth: 720),
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: Column(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Column(
               children: [
                 // ✅ Card de boas-vindas (cara do site)
                 Container(
@@ -184,6 +492,64 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
                 label: const Text('Meus pedidos'),
               ),
             ),
+
+
+                const SizedBox(height: 14),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: FratheliColors.surface,
+                    border: Border.all(color: FratheliColors.border),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.badge_outlined, color: FratheliColors.brown),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Meus dados',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: FratheliColors.text,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: _loadingProfile ? null : _openEditProfileDialog,
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Editar'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      _infoLine('Nome', (_user?['name'] ?? '—').toString()),
+                      _infoLine('Email', (_user?['email'] ?? '—').toString()),
+                      _infoLine('Telefone', (_profile?['phone'] ?? '—').toString()),
+                      _infoLine('CPF', (_profile?['cpf'] ?? '—').toString()),
+                      _infoLine(
+                        'Endereço',
+                        _formatAddress(_profile?['address']),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _openChangePasswordDialog,
+                          icon: const Icon(Icons.lock_outline),
+                          label: const Text('Alterar senha'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
                 const SizedBox(height: 14),
 
@@ -368,6 +734,9 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
                 ),
               ],
             ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -429,4 +798,33 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
     );
   }
 
+}
+
+
+Widget _infoLine(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: FratheliColors.textMuted,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value.isEmpty ? '—' : value,
+          style: const TextStyle(
+            color: FratheliColors.text,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    ),
+  );
 }
