@@ -97,7 +97,7 @@ class _CadastroPageState extends State<CadastroPage> {
                     style: TextStyle(color: FratheliColors.brown),
                   ),
                   TextSpan(
-                    text: 'CAFÉ',
+                    text: 'CAFÉS',
                     style: TextStyle(color: FratheliColors.gold2),
                   ),
                 ],

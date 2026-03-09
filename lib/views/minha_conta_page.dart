@@ -207,6 +207,7 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
     return '—';
   }
 
+  /*
   Future<void> _openEditProfileDialog() async {
     final nameCtrl = TextEditingController(
       text: (_user?['name'] ?? '').toString(),
@@ -345,6 +346,210 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Dados atualizados com sucesso')),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erro ao atualizar dados: $e')),
+                  );
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      final refreshed = await AuthService.fetchMyAccount();
+      final refreshedProfile = await AuthService.fetchClientProfile();
+
+      if (!mounted) return;
+      setState(() {
+        _user = refreshed['user'];
+        _profile = refreshedProfile;
+        _profileDialogShown = false;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _isProfileIncomplete()) {
+          _showCompleteProfileDialog();
+        }
+      });
+    }
+  }
+  */
+  Future<void> _openEditProfileDialog() async {
+    final nameCtrl = TextEditingController(
+      text: (_user?['name'] ?? '').toString(),
+    );
+    final phoneCtrl = TextEditingController(
+      text: (_profile?['phone'] ?? '').toString(),
+    );
+    final cpfCtrl = TextEditingController(
+      text: (_profile?['cpf'] ?? '').toString(),
+    );
+
+    final currentAddress = _profile?['address'];
+    String initialStreet = '';
+    String initialCep = '';
+
+    if (currentAddress is Map) {
+      initialStreet = (currentAddress['street'] ?? '').toString().trim();
+      initialCep = ((currentAddress['cep'] ?? currentAddress['zip']) ?? '')
+          .toString()
+          .trim();
+    } else {
+      final formatted = _formatAddress(_profile?['address']);
+      initialStreet = formatted == '—' ? '' : formatted;
+    }
+
+    final addressCtrl = TextEditingController(text: initialStreet);
+    final cepCtrl = TextEditingController(text: initialCep);
+
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: FratheliColors.surface,
+          surfaceTintColor: Colors.transparent,
+          title: const Text(
+            'Editar dados',
+            style: TextStyle(
+              color: FratheliColors.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          content: SizedBox(
+            width: 520,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: nameCtrl,
+                      style: const TextStyle(color: FratheliColors.text),
+                      decoration: const InputDecoration(labelText: 'Nome'),
+                      validator: (v) {
+                        if ((v ?? '').trim().length < 3) {
+                          return 'Informe seu nome';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      initialValue: (_user?['email'] ?? '').toString(),
+                      enabled: false,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: phoneCtrl,
+                      style: const TextStyle(color: FratheliColors.text),
+                      decoration: const InputDecoration(labelText: 'Telefone'),
+                      validator: (v) {
+                        final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                        if (digits.length < 10) return 'Telefone inválido';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: cpfCtrl,
+                      style: const TextStyle(color: FratheliColors.text),
+                      decoration: const InputDecoration(labelText: 'CPF'),
+                      validator: (v) {
+                        final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                        if (digits.length != 11) return 'CPF inválido';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: cepCtrl,
+                      style: const TextStyle(color: FratheliColors.text),
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'CEP'),
+                      validator: (v) {
+                        final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                        if (digits.length != 8) return 'CEP inválido';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: addressCtrl,
+                      style: const TextStyle(color: FratheliColors.text),
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Endereço completo',
+                      ),
+                      validator: (v) {
+                        if ((v ?? '').trim().length < 8) {
+                          return 'Endereço inválido';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (!(formKey.currentState?.validate() ?? false)) return;
+
+                try {
+                  await AuthService.updateBasicUser(
+                    name: nameCtrl.text.trim(),
+                  );
+
+                  await AuthService.upsertClientProfile(
+                    cpf: cpfCtrl.text.trim(),
+                    phone: phoneCtrl.text.trim(),
+                    address: {
+                      'street': addressCtrl.text.trim(),
+                      'cep': cepCtrl.text.trim(),
+                    },
+                  );
+
+                  if (!mounted) return;
+
+                  setState(() {
+                    _user = {
+                      ...?_user,
+                      'name': nameCtrl.text.trim(),
+                    };
+
+                    _profile = {
+                      ...?_profile,
+                      'cpf': cpfCtrl.text.trim(),
+                      'phone': phoneCtrl.text.trim(),
+                      'address': {
+                        'street': addressCtrl.text.trim(),
+                        'cep': cepCtrl.text.trim(),
+                      },
+                    };
+                  });
+
+                  Navigator.pop(ctx, true);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Dados atualizados com sucesso'),
+                    ),
                   );
                 } catch (e) {
                   if (!mounted) return;
@@ -518,7 +723,7 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
                 ),
                 children: [
                   TextSpan(
-                    text: 'CAFÉ',
+                    text: 'CAFÉS',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: FratheliColors.textMuted,
@@ -670,6 +875,7 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
 
                 const SizedBox(height: 14),
 
+                /// ✅ Meus dados
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
@@ -726,8 +932,8 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
                 ),
 
                 const SizedBox(height: 14),
-
-                // ✅ Wallet de pontos (premium)
+/*
+                /// ✅ Wallet de pontos (premium)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
@@ -869,7 +1075,7 @@ class _MinhaContaPageState extends State<MinhaContaPage> {
                     },
                   ),
                 ),
-
+*/
               ],
             ),
                 ],

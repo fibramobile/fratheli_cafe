@@ -2161,7 +2161,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       children: [
                         TextSpan(
-                          text: 'CAFÉ',
+                          text: 'CAFÉS',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: FratheliColors.textMuted,

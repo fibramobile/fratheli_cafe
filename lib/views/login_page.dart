@@ -89,7 +89,7 @@ class _LoginPageState extends State<LoginPage> {
                     style: TextStyle(color: FratheliColors.brown),
                   ),
                   TextSpan(
-                    text: 'CAFÉ',
+                    text: 'CAFÉS',
                     style: TextStyle(color: FratheliColors.gold2),
                   ),
                 ],
