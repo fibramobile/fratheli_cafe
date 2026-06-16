@@ -1,150 +1,113 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
+import '../config/app_config.dart';
 import 'auth_service.dart';
 
 class OrderService {
-  static const String baseUrl = 'https://frathelicafe.com.br/api';
-
   static Map<String, dynamic> safeJson(String raw) {
     try {
-      final d = jsonDecode(raw);
-      return d is Map<String, dynamic> ? d : {};
+      final decoded = jsonDecode(raw);
+      return decoded is Map<String, dynamic> ? decoded : {};
     } catch (_) {
       return {};
     }
   }
-/*
-  static Future<Map<String, dynamic>> createOrder(Map<String, dynamic> payload) async {
-    final token = await AuthService.getToken();
-    if (token == null) throw Exception('Usuário não autenticado');
 
-    // ✅ CONFIRME A ROTA AQUI:
-    // Se seu PHP é /orders/creater.php, use isso.
-    final uri = Uri.parse('$baseUrl/orders/create.php'); // <- ajuste aqui
-
-    debugPrint('🧾 [createOrder] POST => $uri');
-    debugPrint('🧾 [createOrder] token? ${token.isNotEmpty} (len=${token.length})');
-    debugPrint('🧾 [createOrder] payload => ${jsonEncode(payload)}');
-
-    http.Response res;
-    try {
-      res = await http
-          .post(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json; charset=utf-8',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(payload),
-      )
-          .timeout(const Duration(seconds: 20));
-    } catch (e) {
-      debugPrint('❌ [createOrder] exception on POST: $e');
-      rethrow;
-    }
-
-    debugPrint('🧾 [createOrder] status=${res.statusCode}');
-    debugPrint('🧾 [createOrder] headers=${res.headers}');
-    debugPrint('🧾 [createOrder] rawBody=${res.body}');
-
-    final body = safeJson(res.body);
-    debugPrint('🧾 [createOrder] parsedBody=$body');
-
-    if (res.statusCode != 200) {
-      throw Exception((body['error'] ?? 'Erro ao criar pedido').toString());
-    }
-
-    return body;
-  }
-*/
-  static Future<String> createOrder(Map<String, dynamic> payload) async {
-    final token = await AuthService.getToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('Usuário não autenticado');
-    }
-
-    final uri = Uri.parse('$baseUrl/orders/create.php');
-
-    debugPrint('🧾 [OrderService.createOrder] POST => $uri');
-    debugPrint('🧾 [OrderService.createOrder] token? ${token.isNotEmpty} (len=${token.length})');
-    debugPrint('🧾 [OrderService.createOrder] payload => ${jsonEncode(payload)}');
-
-    final res = await http.post(
-      uri,
-      headers: {
+  static Map<String, String> _authHeaders(String token) => {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json; charset=utf-8',
         'Accept': 'application/json',
-      },
-      body: jsonEncode(payload),
-    ).timeout(const Duration(seconds: 20));
+      };
 
-    debugPrint('🧾 [OrderService.createOrder] status=${res.statusCode}');
-    debugPrint('🧾 [OrderService.createOrder] rawBody=${res.body}');
+  static String _extractOrderCode(Map<String, dynamic> body) {
+    final candidates = <dynamic>[
+      body['orderCode'],
+      body['orderId'],
+      body['id'],
+      body['order'] is Map ? body['order']['id'] : null,
+      body['order'] is Map ? body['order']['order_code'] : null,
+      body['order'] is Map ? body['order']['code'] : null,
+      body['data'] is Map ? body['data']['orderId'] : null,
+      body['data'] is Map ? body['data']['id'] : null,
+    ];
+
+    for (final value in candidates) {
+      final code = value?.toString().trim() ?? '';
+      if (code.isNotEmpty) return code;
+    }
+
+    throw Exception('Resposta inválida do servidor: código do pedido não veio.');
+  }
+
+  static Future<String> createOrder(Map<String, dynamic> payload) async {
+    final token = await AuthService.getToken();
+    if (token == null || token.isEmpty) throw Exception('Usuário não autenticado');
+
+    final sanitizedPayload = Map<String, dynamic>.from(payload);
+    sanitizedPayload['paymentProvider'] ??= 'PIX_MANUAL';
+    sanitizedPayload['paymentStatus'] ??= 'AGUARDANDO_PAGAMENTO';
+    sanitizedPayload['shippingStatus'] ??= 'AGUARDANDO_PAGAMENTO';
+
+    if (kDebugMode) {
+      debugPrint('[OrderService.createOrder] POST ${AppConfig.orderCreate}');
+      debugPrint('[OrderService.createOrder] payload=${jsonEncode(sanitizedPayload)}');
+    }
+
+    final res = await http
+        .post(
+          Uri.parse(AppConfig.orderCreate),
+          headers: _authHeaders(token),
+          body: jsonEncode(sanitizedPayload),
+        )
+        .timeout(const Duration(seconds: 25));
 
     final body = safeJson(res.body);
 
-    if (res.statusCode != 200) {
+    if (kDebugMode) {
+      debugPrint('[OrderService.createOrder] status=${res.statusCode} body=${res.body}');
+    }
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception((body['error'] ?? 'Erro ao criar pedido').toString());
     }
 
-    // Esperado: {"ok":true,"order":{"db_id":11,"id":"ord_..."}}
-    if (body['ok'] == true) {
-      final code = body['order']?['id']?.toString();
-      if (code != null && code.isNotEmpty) return code;
-    }
-
-    throw Exception('Resposta inválida do servidor (order.id não veio).');
+    return _extractOrderCode(body);
   }
 
   static Future<String> createExternalOrder(Map<String, dynamic> payload) async {
     final token = await AuthService.getToken();
     if (token == null || token.isEmpty) throw Exception('Usuário não autenticado');
 
-    final uri = Uri.parse('$baseUrl/orders/create_external.php');
-
-    debugPrint('🧾 [createExternalOrder] POST => $uri');
-    debugPrint('🧾 [createExternalOrder] payload => ${jsonEncode(payload)}');
-
-    final res = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json; charset=utf-8',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode(payload),
-    );
-
-    debugPrint('🧾 [createExternalOrder] status=${res.statusCode}');
-    debugPrint('🧾 [createExternalOrder] rawBody=${res.body}');
+    final res = await http
+        .post(
+          Uri.parse(AppConfig.orderCreateExternal),
+          headers: _authHeaders(token),
+          body: jsonEncode(payload),
+        )
+        .timeout(const Duration(seconds: 25));
 
     final body = safeJson(res.body);
-    if (res.statusCode != 200) {
-      throw Exception((body['error'] ?? 'Erro no servidor').toString());
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception((body['error'] ?? 'Erro ao criar pedido externo').toString());
     }
 
-    final code = (body['order']?['id'] ?? '').toString();
-    if (code.isEmpty) throw Exception('Resposta inválida do servidor (order.id vazio).');
-    return code;
+    return _extractOrderCode(body);
   }
 
   static Future<Map<String, dynamic>> fetchOrder(String orderId) async {
     final token = await AuthService.getToken();
-    if (token == null) throw Exception('Usuário não autenticado');
+    if (token == null || token.isEmpty) throw Exception('Usuário não autenticado');
 
-    final uri = Uri.parse('$baseUrl/orders/get.php?id=$orderId');
-
-    final res = await http.get(uri, headers: {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json; charset=utf-8',
-    });
+    final uri = Uri.parse(AppConfig.orderGet).replace(queryParameters: {'id': orderId});
+    final res = await http
+        .get(uri, headers: _authHeaders(token))
+        .timeout(const Duration(seconds: 20));
 
     final body = safeJson(res.body);
-
-    if (res.statusCode != 200) {
+    if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception((body['error'] ?? 'Falha ao buscar pedido').toString());
     }
 
@@ -153,25 +116,23 @@ class OrderService {
 
   static Future<List<Map<String, dynamic>>> fetchMyOrders() async {
     final token = await AuthService.getToken();
-    if (token == null) throw Exception('Usuário não autenticado');
+    if (token == null || token.isEmpty) throw Exception('Usuário não autenticado');
 
-    final uri = Uri.parse('$baseUrl/orders/list.php');
-
-    final res = await http.get(uri, headers: {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json; charset=utf-8',
-    });
+    final res = await http
+        .get(Uri.parse(AppConfig.orderList), headers: _authHeaders(token))
+        .timeout(const Duration(seconds: 20));
 
     final body = safeJson(res.body);
-    if (res.statusCode != 200) {
+    if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception((body['error'] ?? 'Falha ao listar pedidos').toString());
     }
 
-    final list = body['orders'];
-    if (list is List) {
-      return list.map((e) => (e as Map).cast<String, dynamic>()).toList();
-    }
-    return [];
-  }
+    final orders = body['orders'];
+    if (orders is! List) return [];
 
+    return orders
+        .whereType<Map>()
+        .map((order) => Map<String, dynamic>.from(order))
+        .toList();
+  }
 }

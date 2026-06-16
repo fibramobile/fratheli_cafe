@@ -92,7 +92,7 @@ class FratheliApp extends StatelessWidget {
               ),
             ),
           ),
-          cardTheme: CardTheme(
+          cardTheme: CardThemeData(
             color: FratheliColors.surface,
             elevation: 0,
             shape: RoundedRectangleBorder(
