@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1a120d" />
+    <meta
+      name="description"
+      content="Microlotes de cafés especiais produzidos no Sítio Sombra da Mata, nas Montanhas Capixabas."
+    />
+    <title>Frathéli Cafés — Café com origem e identidade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Caslon+Display&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="announcement">
+      <p>Safra 2026 <span></span> Torra fresca <span></span> Enviamos para todo o Brasil</p>
+    </div>
+
+    <header class="site-header" id="inicio">
+      <a class="brand" href="#inicio" aria-label="Frathéli Cafés — início">
+        <img class="brand-logo" src="assets/logo-fratheli.png" alt="Frathéli Cafés" />
+      </a>
+
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+        <span></span><span></span><span></span><b class="sr-only">Abrir menu</b>
+      </button>
+
+      <nav class="main-nav" id="main-nav" aria-label="Navegação principal">
+        <a href="#cafes">Cafés</a>
+        <a href="#processo">Processo com mel</a>
+        <a href="#origem">Nossa origem</a>
+        <a href="#contato">Contato</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="account-trigger" type="button" aria-label="Entrar na conta">
+          <span class="account-icon" aria-hidden="true">●</span>
+          <span class="account-label">Entrar</span>
+        </button>
+        <button class="cart-trigger" type="button" aria-label="Abrir sacola">
+          <span>Sacola</span>
+          <b class="cart-count">0</b>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Sítio Sombra da Mata · Alfredo Chaves, ES</p>
+          <h1>Café de montanha.<br /><em>Identidade</em> em cada lote.</h1>
+          <p class="hero-text">
+            Microlotes cultivados em família nas Montanhas Capixabas, com processos pós-colheita
+            que aproximam duas paixões da nossa terra: o café e as abelhas nativas brasileiras.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#cafes">Escolher meu café</a>
+            <a class="text-link" href="#processo">Conhecer o processo <span>↗</span></a>
+          </div>
+          <dl class="hero-facts" aria-label="Destaques da Frathéli">
+            <div><dt>700 m</dt><dd>Altitude</dd></div>
+            <div><dt>84–86</dt><dd>Pontos</dd></div>
+            <div><dt>100%</dt><dd>Arábica</dd></div>
+          </dl>
+        </div>
+
+        <div class="hero-visual">
+          <img src="assets/hero-fratheli.jpg" alt="Cafezal nas Montanhas Capixabas ao amanhecer" />
+          <p class="vertical-note">MONTANHAS CAPIXABAS · SAFRA 2026</p>
+          <div class="origin-seal" aria-label="Produção familiar e origem rastreável">
+            <strong>ORIGEM</strong><span>RASTREÁVEL</span><small>ALFREDO CHAVES · ES</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="section product-section" id="cafes">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Escolha pela experiência</p>
+            <h2>Microlotes da safra</h2>
+          </div>
+          <p>
+            Poucos lotes, cada um com uma história e um perfil sensorial próprios.
+            Selecione em grãos ou moído.
+          </p>
+        </div>
+
+        <div class="filters" role="group" aria-label="Filtrar cafés">
+          <button class="filter active" data-filter="all" type="button">Todos</button>
+          <button class="filter" data-filter="mel" type="button">Com mel de abelhas nativas</button>
+          <button class="filter" data-filter="natural" type="button">Processo natural</button>
+        </div>
+
+        <div class="product-grid">
+          <article class="product-card" data-category="mel">
+            <div class="lot-art lot-bugia">
+              <span class="lot-number">LOTE 01</span>
+              <p>BUGIA</p>
+              <span class="score">86<br /><small>pontos</small></span>
+              <div class="lot-lines"></div>
+            </div>
+            <div class="product-info">
+              <p class="product-kicker">Café especial · 250 g</p>
+              <h3>Bugia</h3>
+              <p class="tasting">Chocolate · Damasco · Melaço</p>
+              <p class="process-label">Pós-colheita com mel de Uruçu Amarela</p>
+              <label class="grind-choice"><span>Como prefere?</span><select><option value="Grão">Em grãos</option><option value="Moído">Moído</option></select></label>
+              <div class="product-bottom">
+                <p><small>a partir de</small><strong>R$ 39,00</strong></p>
+                <button class="add-button" type="button" data-sku="BUGIA-250" data-name="Bugia 250 g" data-price="39">Adicionar</button>
+              </div>
+              <button class="details-link" type="button" data-product="bugia">Ver detalhes do lote</button>
+            </div>
+          </article>
+
+          <article class="product-card" data-category="mel">
+            <div class="lot-art lot-tiuba">
+              <span class="lot-number">LOTE 02</span>
+              <p>TIÚBA</p>
+              <span class="score">86<br /><small>pontos</small></span>
+              <div class="lot-lines"></div>
+            </div>
+            <div class="product-info">
+              <p class="product-kicker">Café especial · 250 g</p>
+              <h3>Tiúba</h3>
+              <p class="tasting">Chocolate · Frutas amarelas · Doçura</p>
+              <p class="process-label">Pós-colheita com mel de Uruçu Cinzenta</p>
+              <label class="grind-choice"><span>Como prefere?</span><select><option value="Grão">Em grãos</option><option value="Moído">Moído</option></select></label>
+              <div class="product-bottom">
+                <p><small>a partir de</small><strong>R$ 39,00</strong></p>
+                <button class="add-button" type="button" data-sku="TIUBA-250" data-name="Tiúba 250 g" data-price="39">Adicionar</button>
+              </div>
+              <button class="details-link" type="button" data-product="tiuba">Ver detalhes do lote</button>
+            </div>
+          </article>
+
+          <article class="product-card" data-category="natural">
+            <div class="lot-art lot-aracari">
+              <span class="lot-number">LOTE 03</span>
+              <p>ARAÇARI</p>
+              <span class="score">84<br /><small>pontos</small></span>
+              <div class="lot-lines"></div>
+            </div>
+            <div class="product-info">
+              <p class="product-kicker">Café especial · 250 g</p>
+              <h3>Araçari</h3>
+              <p class="tasting">Caramelo · Castanhas · Corpo sedoso</p>
+              <p class="process-label">Processo natural · Montanhas Capixabas</p>
+              <label class="grind-choice"><span>Como prefere?</span><select><option value="Grão">Em grãos</option><option value="Moído">Moído</option></select></label>
+              <div class="product-bottom">
+                <p><small>a partir de</small><strong>R$ 37,00</strong></p>
+                <button class="add-button" type="button" data-sku="ARACARI-250" data-name="Araçari 250 g" data-price="37">Adicionar</button>
+              </div>
+              <button class="details-link" type="button" data-product="aracari">Ver detalhes do lote</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="process-section" id="processo">
+        <div class="process-image">
+          <img src="assets/processo-mel.jpg" alt="Café secando em terreiro suspenso durante o pós-colheita" />
+          <span>PROCESSO AUTORAL · DESDE 2025</span>
+        </div>
+        <div class="process-copy">
+          <p class="eyebrow eyebrow-light">Nosso diferencial</p>
+          <h2>Quando o café encontra o meliponário.</h2>
+          <p class="lead">
+            Em edições selecionadas, o café cereja descascado recebe mel de abelhas nativas
+            durante a secagem no terreiro suspenso. Um processo experimental, conduzido em
+            pequena escala e acompanhado lote a lote.
+          </p>
+          <ol class="process-steps">
+            <li><span>01</span><div><strong>Colheita seletiva</strong><p>Somente frutos maduros, colhidos manualmente.</p></div></li>
+            <li><span>02</span><div><strong>Cereja descascado</strong><p>A base do processo honey preserva a mucilagem do fruto.</p></div></li>
+            <li><span>03</span><div><strong>Mel de abelhas nativas</strong><p>Aplicado cuidadosamente durante a secagem.</p></div></li>
+            <li><span>04</span><div><strong>Torra por perfil</strong><p>Desenvolvida para revelar a identidade sensorial do lote.</p></div></li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section origin-section" id="origem">
+        <div class="origin-intro">
+          <p class="eyebrow">Nossa origem</p>
+          <h2>Pequena escala.<br />Grande identidade.</h2>
+        </div>
+        <div class="origin-story">
+          <p class="origin-lead">
+            “Mais do que produzir café, queremos criar experiências que carreguem a história
+            da nossa terra, da nossa família e das Montanhas Capixabas.”
+          </p>
+          <p>
+            A Frathéli nasce no Sítio Sombra da Mata, em Ribeirão de São Antônio, Alfredo
+            Chaves. A capacidade limitada da propriedade não é um obstáculo: é o que nos
+            permite acompanhar cada microlote, experimentar e preservar a personalidade de
+            cada safra.
+          </p>
+          <div class="origin-tags">
+            <span>Produção familiar</span><span>Origem única</span><span>Microlotes rastreáveis</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="testimonial-section" aria-label="Manifesto da Frathéli">
+        <p class="eyebrow">Manifesto Frathéli</p>
+        <blockquote>
+          “Cada microlote carrega a montanha, o trabalho da família e a coragem de
+          experimentar.”
+        </blockquote>
+        <p class="testimonial-author">Café com origem. Café com identidade.</p>
+      </section>
+
+      <section class="contact-section" id="contato">
+        <div>
+          <p class="eyebrow eyebrow-light">Atendimento direto do produtor</p>
+          <h2>Quer encontrar o café certo para a sua xícara?</h2>
+        </div>
+        <a class="button button-gold" href="https://wa.me/5527996033401" target="_blank" rel="noreferrer">Conversar no WhatsApp</a>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-brand">
+        <a class="brand brand-light" href="#inicio"><img class="footer-logo" src="assets/logo-fratheli.png" alt="Frathéli Cafés" /></a>
+        <p>Café com origem. Café com identidade.</p>
+      </div>
+      <div><strong>Explore</strong><a href="#cafes">Cafés</a><a href="#processo">Processo</a><a href="#origem">Origem</a></div>
+      <div><strong>Atendimento</strong><a href="https://www.instagram.com/fratheli_cafe" target="_blank" rel="noreferrer">Instagram</a><a href="https://wa.me/5527996033401" target="_blank" rel="noreferrer">WhatsApp</a><span>Alfredo Chaves · ES</span></div>
+      <p class="copyright">© 2026 Frathéli Cafés · Sítio Sombra da Mata <span class="visit-divider">·</span> <span id="visit-count">Carregando visitas…</span></p>
+    </footer>
+
+    <div class="drawer-backdrop" hidden></div>
+    <aside class="cart-drawer" aria-hidden="true" aria-label="Sua sacola">
+      <div class="drawer-header"><div><p class="eyebrow">Sua seleção</p><h2>Sacola</h2></div><button class="drawer-close" type="button" aria-label="Fechar sacola">×</button></div>
+      <div class="cart-items"><p class="empty-cart">Sua sacola está vazia.</p></div>
+      <div class="cart-summary">
+        <div class="freight-mode" role="radiogroup" aria-label="Forma de entrega">
+          <label><input type="radio" name="freight-mode" value="calculated" checked /><span>Calcular pelo CEP</span></label>
+          <label><input type="radio" name="freight-mode" value="combine" /><span>Frete a combinar</span></label>
+        </div>
+        <div class="freight-calculator">
+          <label for="cart-cep">CEP de entrega</label>
+          <div class="cep-row"><input id="cart-cep" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" /><button class="calculate-freight" type="button">Calcular</button></div>
+          <p class="freight-error" role="alert"></p>
+          <div class="freight-results" aria-live="polite"></div>
+        </div>
+        <div class="cart-totals">
+          <div><span>Subtotal</span><strong class="cart-subtotal">R$ 0,00</strong></div>
+          <div><span>Frete</span><strong class="cart-freight">A calcular</strong></div>
+          <p class="freight-selected-meta"></p>
+          <div class="cart-total-row"><span>Total</span><strong class="cart-total">R$ 0,00</strong></div>
+        </div>
+        <button type="button" class="button button-primary checkout-action">Continuar para o pedido</button>
+      </div>
+    </aside>
+
+    <dialog class="product-dialog">
+      <button class="dialog-close" type="button" aria-label="Fechar detalhes">×</button>
+      <p class="eyebrow dialog-eyebrow">Detalhes do microlote</p>
+      <h2 class="dialog-title"></h2>
+      <p class="dialog-description"></p>
+      <dl class="dialog-facts"></dl>
+      <label class="grind-choice dialog-grind"><span>Como prefere?</span><select><option value="Grão">Em grãos</option><option value="Moído">Moído</option></select></label>
+      <button type="button" class="button button-primary dialog-add">Adicionar à sacola</button>
+    </dialog>
+
+    <dialog class="auth-dialog" aria-labelledby="auth-title">
+      <button class="dialog-close auth-close" type="button" aria-label="Fechar acesso à conta">×</button>
+      <p class="eyebrow">Área do cliente</p>
+      <h2 id="auth-title">Entrar</h2>
+      <p class="auth-message">Use a mesma conta que você já possui no site da Frathéli.</p>
+      <div class="auth-tabs" role="tablist" aria-label="Acesso à conta">
+        <button class="auth-tab active" type="button" role="tab" aria-selected="true" data-auth-view="login">Entrar</button>
+        <button class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-view="register">Criar conta</button>
+      </div>
+      <form class="auth-form login-form" novalidate>
+        <label><span>E-mail</span><input name="email" type="email" autocomplete="email" required /></label>
+        <label><span>Senha</span><input name="password" type="password" autocomplete="current-password" minlength="6" required /></label>
+        <p class="form-error login-error" role="alert"></p>
+        <button class="button button-primary auth-submit" type="submit">Entrar</button>
+      </form>
+      <form class="auth-form register-form" novalidate hidden>
+        <label><span>Nome completo</span><input name="name" type="text" autocomplete="name" minlength="2" required /></label>
+        <label><span>E-mail</span><input name="email" type="email" autocomplete="email" required /></label>
+        <label><span>WhatsApp <small>(opcional)</small></span><input name="whatsapp" type="tel" autocomplete="tel" /></label>
+        <label><span>Senha</span><input name="password" type="password" autocomplete="new-password" minlength="6" required /></label>
+        <p class="form-error register-error" role="alert"></p>
+        <button class="button button-primary auth-submit" type="submit">Criar minha conta</button>
+      </form>
+    </dialog>
+
+    <dialog class="account-dialog" aria-labelledby="account-title">
+      <button class="dialog-close account-close" type="button" aria-label="Fechar minha conta">×</button>
+      <p class="eyebrow">Área do cliente</p>
+      <div class="account-summary">
+        <span class="account-avatar" aria-hidden="true">F</span>
+        <div><h2 id="account-title">Minha conta</h2><p class="account-name"></p><p class="account-email"></p></div>
+      </div>
+      <p class="account-note">Sua conta está conectada ao sistema atual da Frathéli e será usada para identificar seus pedidos.</p>
+      <button class="button button-primary orders-open-button" type="button">
+        <span>Meus pedidos e status</span><span aria-hidden="true">→</span>
+      </button>
+      <button class="button button-outline logout-button" type="button">Sair da conta</button>
+    </dialog>
+
+    <dialog class="orders-dialog" aria-labelledby="orders-title">
+      <button class="dialog-close orders-close" type="button" aria-label="Fechar meus pedidos">×</button>
+      <div class="orders-heading">
+        <div>
+          <p class="eyebrow">Área do cliente</p>
+          <h2 id="orders-title">Meus pedidos</h2>
+          <p>Acompanhe o pagamento, o preparo e a entrega das suas compras.</p>
+        </div>
+        <button class="orders-refresh" type="button" aria-label="Atualizar pedidos">↻ <span>Atualizar</span></button>
+      </div>
+      <div class="orders-content" aria-live="polite"></div>
+    </dialog>
+
+    <dialog class="checkout-dialog" aria-labelledby="checkout-title">
+      <button class="dialog-close checkout-close" type="button" aria-label="Fechar pedido">×</button>
+      <p class="eyebrow">Finalizar compra</p>
+      <h2 id="checkout-title">Dados do pedido</h2>
+      <p class="checkout-intro">Confirme seus dados e a forma de entrega.</p>
+      <form class="checkout-form" novalidate>
+        <div class="checkout-fields">
+          <label><span>Nome completo</span><input name="name" type="text" autocomplete="name" required /></label>
+          <label><span>WhatsApp</span><input name="phone" type="tel" autocomplete="tel" required /></label>
+          <label><span>CPF</span><input name="cpf" type="text" inputmode="numeric" autocomplete="off" required /></label>
+          <label><span>CEP</span><input name="cep" type="text" inputmode="numeric" autocomplete="postal-code" required /></label>
+          <label class="field-full"><span>Endereço completo</span><textarea name="address" rows="3" autocomplete="street-address" required></textarea></label>
+        </div>
+        <label class="checkout-consent"><input name="freight" type="checkbox" required /><span class="checkout-consent-text">Estou de acordo em combinar o frete após o pedido.</span></label>
+        <div class="checkout-order-summary">
+          <div><span>Subtotal</span><strong class="checkout-subtotal-value">R$ 0,00</strong></div>
+          <div><span>Frete</span><strong class="checkout-freight-value">A combinar</strong></div>
+          <div class="checkout-total"><span>Total</span><strong class="checkout-total-value">R$ 0,00</strong></div>
+        </div>
+        <p class="form-error checkout-error" role="alert"></p>
+        <button class="button button-primary checkout-submit" type="submit">Criar pedido e seguir para o Pix</button>
+      </form>
+    </dialog>
+
+    <div class="toast" role="status" aria-live="polite"></div>
+    <script src="script.js"></script>
+  </body>
+</html>

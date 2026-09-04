@@ -1,0 +1,1 @@
+ /Users/francis/Desktop/Projetos\ Flutter\ /fratheli_cafe_web/build/b5495c586cb999da7a60e9a738e9b167/dart_build_result.json: 
