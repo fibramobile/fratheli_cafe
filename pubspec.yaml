@@ -3,7 +3,7 @@ description: "Site Frathéli Café - Cafés Artesanais"
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.9.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -17,6 +17,10 @@ dependencies:
   mask_text_input_formatter: ^2.9.0
   font_awesome_flutter: ^10.7.0
   shared_preferences: ^2.5.0
+  firebase_core: ^4.12.1
+  firebase_auth: ^6.5.6
+  cloud_firestore: ^6.7.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -25,7 +29,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
   assets:
     - assets/img/
     - assets/banners/
+    - assets/premium/

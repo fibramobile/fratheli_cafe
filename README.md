@@ -1,17 +1,38 @@
-# fratheli_cafe_web
+# Frathéli Cafés — Layout Premium em Flutter
 
-Site Frathéli Café - Cafés Artesanais
+Projeto Flutter completo da Frathéli Cafés, com interface responsiva para Web,
+Android e iOS.
 
-## Getting Started
+## Funcionalidades mantidas
 
-This project is a starting point for a Flutter application.
+- catálogo remoto de produtos, com vitrine local de segurança;
+- cadastro, login e área do cliente;
+- sacola com seleção de moagem e quantidade;
+- cálculo de frete por CEP e quantidade de pacotes;
+- criação do pedido e abertura do pagamento Pix;
+- listagem de pedidos e status de pagamento e entrega;
+- contador de visitas no rodapé;
+- sincronização de pedidos já existente no `OrderService`.
 
-A few resources to get you started if this is your first Flutter project:
+## Executar
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter pub get
+flutter run -d chrome
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# fratheli_cafe
+Para gerar a versão web:
+
+```bash
+flutter build web --release
+```
+
+O resultado será criado em `build/web`.
+
+## Arquivos principais
+
+- `lib/views/home_page.dart`: página premium responsiva;
+- `lib/views/widgets/cart_drawer.dart`: sacola, frete e checkout;
+- `lib/views/meus_pedidos_page.dart`: histórico e status;
+- `lib/views/order_details_page.dart`: detalhes, entrega e pagamento;
+- `assets/premium/`: logo e fotografias do layout premium.

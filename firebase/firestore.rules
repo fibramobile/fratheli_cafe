@@ -1,0 +1,97 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function ownsIncomingOrder() {
+      return signedIn() && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    function hasValidAmounts() {
+      return request.resource.data.amounts is map
+        && request.resource.data.amounts.subtotalInCents is int
+        && request.resource.data.amounts.shippingInCents is int
+        && request.resource.data.amounts.totalInCents is int
+        && request.resource.data.amounts.subtotalInCents >= 0
+        && request.resource.data.amounts.shippingInCents >= 0
+        && request.resource.data.amounts.totalInCents
+          == request.resource.data.amounts.subtotalInCents
+          + request.resource.data.amounts.shippingInCents
+        && request.resource.data.amounts.currency == 'BRL';
+    }
+
+    function isInitialOrder() {
+      return request.resource.data.payment.status == 'AGUARDANDO_PAGAMENTO'
+        && request.resource.data.orderStatus == 'RECEBIDO'
+        && request.resource.data.shippingStatus == 'AGUARDANDO_PAGAMENTO'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function ownsUserDocument(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isInitialUser(userId) {
+      return ownsUserDocument(userId)
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == 'user'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    match /users/{userId} {
+      allow create: if isInitialUser(userId);
+
+      allow get: if ownsUserDocument(userId) || isAdmin();
+      allow list: if isAdmin();
+
+      allow update: if isAdmin() || (
+        ownsUserDocument(userId)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name',
+          'phone',
+          'whatsapp',
+          'cpf',
+          'address',
+          'legacyUserId',
+          'updatedAt'
+        ])
+      );
+
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow create: if ownsIncomingOrder()
+        && hasValidAmounts()
+        && isInitialOrder()
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 50;
+
+      allow get, list: if signedIn()
+        && (resource.data.ownerUid == request.auth.uid || isAdmin());
+
+      // Status de pagamento e envio só podem mudar no backend/Admin SDK.
+      allow update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

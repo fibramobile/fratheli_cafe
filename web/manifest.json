@@ -1,11 +1,11 @@
 {
-    "name": "fratheli_cafe_web",
-    "short_name": "fratheli_cafe_web",
+    "name": "Frathéli Cafés",
+    "short_name": "Frathéli",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Site Frathéli Café - Cafés Artesanais",
+    "background_color": "#FDFBF7",
+    "theme_color": "#21150F",
+    "description": "Microlotes de cafés especiais das Montanhas Capixabas.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
