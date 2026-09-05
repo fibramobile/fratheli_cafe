@@ -24,8 +24,14 @@ class _MeusPedidosPageState extends State<MeusPedidosPage> {
 
   Future<void> _refresh() async {
     final next = OrderService.fetchMyOrders();
-    setState(() => _future = next);
-    await next;
+    setState(() {
+      _future = next;
+    });
+    try {
+      await next;
+    } catch (_) {
+      // O FutureBuilder exibe o erro e oferece nova tentativa.
+    }
   }
 
   @override
@@ -150,7 +156,7 @@ class _OrdersHero extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 18),
-                      ConstrainedBox(
+                       ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: 570),
                         child: const Text(
                           'Acompanhe o pagamento, a preparação e o caminho de cada lote até a sua casa.',

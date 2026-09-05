@@ -32,9 +32,20 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     if (id.isNotEmpty) _future = OrderService.fetchOrder(id);
   }
 
-  void _refresh() {
+  Future<void> _refresh() async {
     final id = (_orderId ?? '').trim();
-    if (id.isNotEmpty) setState(() => _future = OrderService.fetchOrder(id));
+    if (id.isEmpty || !mounted) return;
+
+    final next = OrderService.fetchOrder(id);
+    setState(() {
+      _future = next;
+    });
+
+    try {
+      await next;
+    } catch (_) {
+      // O FutureBuilder apresenta a mensagem e mantém disponível o botão de tentar novamente.
+    }
   }
 
   Future<void> _pay(String code) async {

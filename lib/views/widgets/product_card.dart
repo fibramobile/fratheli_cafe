@@ -29,9 +29,19 @@ class _ProductCardState extends State<ProductCard> {
       : widget.product.grindOptions;
 
   String get _name {
+    final pricingName = widget.product.pricingName?.trim() ?? '';
+    if (pricingName.isNotEmpty) return pricingName;
+
     final raw = widget.product.name.trim();
-    if (raw.contains(' - ')) return raw.split(' - ').last.trim();
-    return raw.replaceAll(RegExp(r'\s*-?\s*250\s*g', caseSensitive: false), '').trim();
+    return raw
+        .replaceFirst(
+          RegExp(
+            r'\s*-?\s*\d+(?:[.,]\d+)?\s*(?:kg|g|ml)\s*$',
+            caseSensitive: false,
+          ),
+          '',
+        )
+        .trim();
   }
 
   @override
@@ -275,8 +285,13 @@ class _ProductCardState extends State<ProductCard> {
       );
 
   String _kicker(Product product) {
-    final size = product.size?.trim();
-    return 'CAFÉ ESPECIAL · ${size == null || size.isEmpty ? '250 G' : size.toUpperCase()}';
+    final explicitSize = product.size?.trim() ?? '';
+    final inferredSize = RegExp(
+      r'\d+(?:[.,]\d+)?\s*(?:kg|g|ml)',
+      caseSensitive: false,
+    ).firstMatch(product.name)?.group(0);
+    final size = explicitSize.isNotEmpty ? explicitSize : (inferredSize ?? '250 g');
+    return 'CAFÉ ESPECIAL · ${size.toUpperCase()}';
   }
 
   String _process(Product product) {
@@ -305,33 +320,154 @@ class _LotArtwork extends StatelessWidget {
         : lower.contains('tiúba') || lower.contains('tiuba')
             ? const Color(0xFF734437)
             : const Color(0xFF3D5038);
-    final score = isNatural ? '84' : '86';
-    final lot = isNatural
-        ? 'LOTE 03'
-        : lower.contains('tiúba') || lower.contains('tiuba')
-            ? 'LOTE 02'
-            : 'LOTE 01';
+    final hasImage = product.imagePath.trim().isNotEmpty;
+    final score = _score(product);
+    final label = score != null
+        ? 'CAFÉ ESPECIAL'
+        : product.tag.trim().isEmpty
+            ? 'MICROLOTE'
+            : product.tag.trim().toUpperCase();
 
     return SizedBox(
       height: 270,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ColoredBox(color: background),
-          CustomPaint(painter: _LotLinesPainter()),
+          hasImage
+              ? _productImage(background)
+              : _fallbackArtwork(background),
+          if (hasImage)
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x55000000),
+                    Colors.transparent,
+                    Color(0x44000000),
+                  ],
+                  stops: [0, .42, 1],
+                ),
+              ),
+            ),
           Positioned(
             top: 20,
             left: 20,
-            child: Text(
-              lot,
-              style: GoogleFonts.dmSans(
-                color: const Color(0xFFE8D9B8),
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: hasImage
+                    ? const Color(0xB31D130D)
+                    : Colors.transparent,
+                border: Border.all(color: const Color(0x66F7EAD1)),
+              ),
+              child: Text(
+                label,
+                style: GoogleFonts.dmSans(
+                  color: const Color(0xFFF7EAD1),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                ),
               ),
             ),
           ),
+          if (score != null)
+            Positioned(
+              right: 18,
+              bottom: 16,
+              child: Container(
+                width: 62,
+                height: 62,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: hasImage
+                      ? const Color(0xB31D130D)
+                      : Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0x99F7EAD1)),
+                ),
+                child: Text.rich(
+                  TextSpan(
+                    text: '$score\n',
+                    style: GoogleFonts.libreCaslonDisplay(
+                      color: const Color(0xFFF7EAD1),
+                      fontSize: 24,
+                      height: .8,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'pontos',
+                        style: GoogleFonts.dmSans(fontSize: 8, letterSpacing: 1),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _productImage(Color background) {
+    final path = product.imagePath.trim();
+    final fallback = _fallbackArtwork(background);
+
+    if (path.startsWith('assets/')) {
+      return ColoredBox(
+        color: FratheliColors.surfaceAlt,
+        child: Image.asset(
+          path,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, __, ___) => fallback,
+        ),
+      );
+    }
+
+    const base = 'https://smapps.16mb.com/fratheli/app/products/';
+    final rawUrl = path.startsWith('http')
+        ? path
+        : Uri.parse(base)
+            .resolve(path.startsWith('/') ? path.substring(1) : path)
+            .toString();
+    final uri = Uri.parse(rawUrl);
+    final version = product.imageVersion.trim();
+    final url = version.isEmpty
+        ? rawUrl
+        : uri
+            .replace(queryParameters: {...uri.queryParameters, 'v': version})
+            .toString();
+
+    return ColoredBox(
+      color: FratheliColors.surfaceAlt,
+      child: Image.network(
+        url,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return const Center(
+            child: CircularProgressIndicator(
+              color: FratheliColors.cherry,
+              strokeWidth: 2,
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => fallback,
+      ),
+    );
+  }
+
+  Widget _fallbackArtwork(Color background) => Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(color: background),
+          CustomPaint(painter: _LotLinesPainter()),
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -348,39 +484,15 @@ class _LotArtwork extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            right: 18,
-            bottom: 16,
-            child: Container(
-              width: 62,
-              height: 62,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0x99F7EAD1)),
-              ),
-              child: Text.rich(
-                TextSpan(
-                  text: '$score\n',
-                  style: GoogleFonts.libreCaslonDisplay(
-                    color: const Color(0xFFF7EAD1),
-                    fontSize: 24,
-                    height: .8,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: 'pontos',
-                      style: GoogleFonts.dmSans(fontSize: 8, letterSpacing: 1),
-                    ),
-                  ],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
         ],
-      ),
-    );
+      );
+
+  String? _score(Product product) {
+    final match = RegExp(
+      r'(\d{2,3}(?:[.,]\d)?)\s*\+?\s*pontos?',
+      caseSensitive: false,
+    ).firstMatch('${product.tag} ${product.meta}');
+    return match?.group(1)?.replaceAll(',', '.');
   }
 }
 

@@ -64,16 +64,28 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadProducts() async {
     try {
+      final catalogUri = Uri.parse(_catalogUrl).replace(
+        queryParameters: {
+          '_ts': DateTime.now().millisecondsSinceEpoch.toString(),
+        },
+      );
       final response = await http
-          .get(Uri.parse(_catalogUrl))
+          .get(catalogUri)
           .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return;
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       final raw = decoded is Map ? decoded['products'] : null;
       if (raw is! List) return;
+      final imageVersion = decoded is Map
+          ? (decoded['updatedAt']?.toString() ?? '')
+          : '';
       final loaded = raw
           .whereType<Map>()
-          .map((item) => Product.fromJson(Map<String, dynamic>.from(item)))
+          .map((item) {
+            final product = Map<String, dynamic>.from(item);
+            product['imageVersion'] = imageVersion;
+            return Product.fromJson(product);
+          })
           .where((product) => product.sku.isNotEmpty && product.name.isNotEmpty)
           .toList();
       if (loaded.isNotEmpty && mounted) setState(() => _products = loaded);
@@ -750,7 +762,7 @@ class _HeroCopy extends StatelessWidget {
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 650),
             child: const Text(
-              'Microlotes cultivados artesanalmente nas Montanhas Capixabas, com processos pós-colheita que aproximam duas paixões da nossa terra: o café e as abelhas nativas brasileiras.',
+              'Microlotes cultivados em família nas Montanhas Capixabas, com processos pós-colheita que aproximam duas paixões da nossa terra: o café e as abelhas nativas brasileiras.',
               style: TextStyle(color: FratheliColors.text2, fontSize: 16, height: 1.65),
             ),
           ),

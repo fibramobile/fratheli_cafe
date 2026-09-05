@@ -8,6 +8,8 @@ class OrderService {
   static const String baseUrl = 'https://frathelicafe.com.br/api';
   static const String _coffeeSaleSyncUrl =
       'https://southamerica-east1-coffee-sale-fibramobile.cloudfunctions.net/createStorefrontSale';
+  static const String _coffeeSaleStatusUrl =
+      'https://southamerica-east1-coffee-sale-fibramobile.cloudfunctions.net/getStorefrontSaleStatus';
   static const String _pendingSyncsKey = 'pending_coffee_sale_order_syncs';
   static const String _pendingCustomersKey =
       'pending_coffee_sale_order_customers';
@@ -204,6 +206,104 @@ class OrderService {
     }
   }
 
+  static Future<Map<String, Map<String, dynamic>>> _fetchCoffeeSaleStatuses(
+    String token,
+    Iterable<String> orderIds,
+  ) async {
+    final ids = orderIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    final statuses = <String, Map<String, dynamic>>{};
+
+    for (var start = 0; start < ids.length; start += 50) {
+      final end = start + 50 < ids.length ? start + 50 : ids.length;
+      final batch = ids.sublist(start, end);
+      final response = await http
+          .post(
+            Uri.parse(_coffeeSaleStatusUrl),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json; charset=utf-8',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({'orderIds': batch}),
+          )
+          .timeout(const Duration(seconds: 25));
+      final body = safeJson(utf8.decode(response.bodyBytes));
+
+      if (response.statusCode != 200 || body['ok'] != true) {
+        throw Exception(
+          (body['error'] ?? 'Não foi possível consultar o status no Coffee Sale')
+              .toString(),
+        );
+      }
+
+      final rawStatuses = body['statuses'];
+      if (rawStatuses is! Map) continue;
+
+      for (final entry in rawStatuses.entries) {
+        if (entry.value is Map) {
+          statuses[entry.key.toString()] =
+              Map<String, dynamic>.from(entry.value as Map);
+        }
+      }
+    }
+
+    return statuses;
+  }
+
+  static String _orderCode(Map<String, dynamic> order) {
+    for (final key in ['order_code', 'orderCode', 'id']) {
+      final value = order[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
+  static Map<String, dynamic> _mergeCoffeeSaleStatus(
+    Map<String, dynamic> order,
+    Map<String, dynamic>? status,
+  ) {
+    if (status == null || status['found'] != true) return order;
+
+    final merged = Map<String, dynamic>.from(order);
+    final paymentStatus = status['paymentStatus']?.toString().trim() ?? '';
+    final orderStatus = status['orderStatus']?.toString().trim() ?? '';
+
+    if (paymentStatus.isNotEmpty) {
+      merged['paymentStatus'] = paymentStatus;
+      merged['payment_status'] = paymentStatus;
+    }
+    if (orderStatus.isNotEmpty) {
+      merged['orderStatus'] = orderStatus;
+      merged['shippingStatus'] = orderStatus;
+      merged['shipping_status'] = orderStatus;
+    }
+
+    return merged;
+  }
+
+  static Map<String, dynamic> _mergeOrderResponse(
+    Map<String, dynamic> response,
+    Map<String, dynamic>? status,
+  ) {
+    final merged = Map<String, dynamic>.from(response);
+    final rawOrder = response['order'];
+
+    if (rawOrder is Map) {
+      merged['order'] = _mergeCoffeeSaleStatus(
+        Map<String, dynamic>.from(rawOrder),
+        status,
+      );
+    } else {
+      return _mergeCoffeeSaleStatus(merged, status);
+    }
+
+    return merged;
+  }
+
   static Future<void> retryPendingFirebaseSyncs() async {
     final token = await AuthService.getToken();
     if (token == null || token.isEmpty) return;
@@ -334,7 +434,12 @@ class OrderService {
     final token = await AuthService.getToken();
     if (token == null) throw Exception('Usuário não autenticado');
 
-    final uri = Uri.parse('$baseUrl/orders/get.php?id=$orderId');
+    final uri = Uri.parse('$baseUrl/orders/get.php').replace(
+      queryParameters: {
+        'id': orderId,
+        '_ts': DateTime.now().millisecondsSinceEpoch.toString(),
+      },
+    );
 
     final res = await http.get(uri, headers: {
       'Authorization': 'Bearer $token',
@@ -347,7 +452,16 @@ class OrderService {
       throw Exception((body['error'] ?? 'Falha ao buscar pedido').toString());
     }
 
-    return body;
+    try {
+      final statuses = await _fetchCoffeeSaleStatuses(token, [orderId]);
+      return _mergeOrderResponse(body, statuses[orderId]);
+    } catch (error) {
+      debugPrint(
+        '⚠️ Pedido carregado, mas o status do Coffee Sale não pôde ser '
+        'consultado: $error',
+      );
+      return body;
+    }
   }
 
   static Future<List<Map<String, dynamic>>> fetchMyOrders() async {
@@ -356,7 +470,11 @@ class OrderService {
 
     await _retryPendingFirebaseSyncs(token);
 
-    final uri = Uri.parse('$baseUrl/orders/list.php');
+    final uri = Uri.parse('$baseUrl/orders/list.php').replace(
+      queryParameters: {
+        '_ts': DateTime.now().millisecondsSinceEpoch.toString(),
+      },
+    );
 
     final res = await http.get(uri, headers: {
       'Authorization': 'Bearer $token',
@@ -368,11 +486,30 @@ class OrderService {
       throw Exception((body['error'] ?? 'Falha ao listar pedidos').toString());
     }
 
-    final list = body['orders'];
-    if (list is List) {
-      return list.map((e) => (e as Map).cast<String, dynamic>()).toList();
+    final rawList = body['orders'];
+    if (rawList is! List) return [];
+
+    final orders = rawList
+        .whereType<Map>()
+        .map((order) => Map<String, dynamic>.from(order))
+        .toList();
+    final orderIds = orders.map(_orderCode).where((id) => id.isNotEmpty);
+
+    try {
+      final statuses = await _fetchCoffeeSaleStatuses(token, orderIds);
+      return orders
+          .map((order) {
+            final orderId = _orderCode(order);
+            return _mergeCoffeeSaleStatus(order, statuses[orderId]);
+          })
+          .toList();
+    } catch (error) {
+      debugPrint(
+        '⚠️ Pedidos carregados, mas os status do Coffee Sale não puderam ser '
+        'consultados: $error',
+      );
+      return orders;
     }
-    return [];
   }
 
 }

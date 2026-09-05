@@ -3,6 +3,7 @@ class Product {
   final String name;
   final String description;
   final String imagePath;
+  final String imageVersion;
 
   final double price;
   final double? originalPrice;
@@ -28,6 +29,7 @@ class Product {
     required this.name,
     required this.description,
     required this.imagePath,
+    this.imageVersion = '',
     required this.price,
     this.originalPrice,
     required this.tag,
@@ -63,6 +65,7 @@ class Product {
       name: displayName, // 🔥 título completo
       description: json['description'] ?? '',
       imagePath: json['imagePath'] ?? '',
+      imageVersion: json['imageVersion']?.toString() ?? '',
       price: (json['price'] ?? json['fallbackPrice'] ?? 0).toDouble(),
       originalPrice: json['originalPrice'] != null
           ? (json['originalPrice'] as num).toDouble()
